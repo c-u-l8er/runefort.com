@@ -7,9 +7,10 @@
             has a loop, it gets a fort.
         </p>
         <div class="cta-buttons">
+            <a href="/app" class="btn btn-primary">Try the Editor</a>
             <a
                 href="https://github.com/c-u-l8er/runefort.com"
-                class="btn btn-primary"
+                class="btn btn-secondary"
                 target="_blank"
                 rel="noopener">View on GitHub</a
             >

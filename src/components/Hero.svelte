@@ -6,7 +6,7 @@
         &mdash; not with dashboards, but with a place you can walk through.
     </p>
     <div class="cta-row">
-        <a href="#vision" class="btn btn-primary">Explore the Fort</a>
+        <a href="/app" class="btn btn-primary">Try the Editor</a>
         <a
             href="https://github.com/c-u-l8er/runefort.com"
             class="btn btn-secondary"

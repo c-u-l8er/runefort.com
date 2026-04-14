@@ -14,6 +14,7 @@
                     rel="noopener">GitHub</a
                 >
             </li>
+            <li><a href="/app" class="nav-cta">Try It</a></li>
         </ul>
     </div>
 </nav>
@@ -66,6 +67,17 @@
     }
     .nav-links a:hover {
         color: var(--amber);
+    }
+    .nav-links :global(.nav-cta) {
+        color: var(--bg);
+        background: var(--amber);
+        padding: 0.3rem 0.75rem;
+        border-radius: 4px;
+        font-weight: 600;
+    }
+    .nav-links :global(.nav-cta:hover) {
+        color: var(--bg);
+        box-shadow: 0 2px 12px rgba(232, 168, 76, 0.3);
     }
     @media (max-width: 600px) {
         .nav-links {
