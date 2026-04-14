@@ -1,0 +1,2076 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>RuneFort — Spatial cognition for autonomous workflows</title>
+        <meta
+            name="description"
+            content="Dark factories run with the lights off. RuneFort turns them back on — not with dashboards, but with a place you can walk through. Spatial visualization for AI operating systems, agent workflows, and continual learning loops."
+        />
+        <meta
+            name="keywords"
+            content="spatial visualization, AI observability, dark factory, autonomous agents, PULSE loops, cognitive architecture, agent workflows, continual learning"
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+            rel="stylesheet"
+        />
+        <!-- Prism.js syntax highlighting -->
+        <link
+            href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css"
+            rel="stylesheet"
+        />
+        <!-- rot.js — ROguelike Toolkit for blueprint rendering -->
+        <style>
+            :root {
+                --bg: #09090d;
+                --surface: #0e0f14;
+                --surface-2: #15161d;
+                --surface-3: #1c1d26;
+                --border: rgba(255, 255, 255, 0.06);
+                --border-2: rgba(255, 255, 255, 0.1);
+                --text: #e4e2dc;
+                --dim: #7a7770;
+                --muted: #44423d;
+                --amber: #e8a84c;
+                --amber-dim: rgba(232, 168, 76, 0.12);
+                --amber-glow: rgba(232, 168, 76, 0.06);
+                --stone: #8a9a9e;
+                --stone-dim: rgba(138, 154, 158, 0.12);
+                --rune: #c4956a;
+                --rune-dim: rgba(196, 149, 106, 0.15);
+                --seal: #5b6a8a;
+                --alert: #e85a5a;
+                --serif: "Cinzel", serif;
+                --sans: "IBM Plex Sans", sans-serif;
+                --mono: "JetBrains Mono", monospace;
+                --max-w: 1100px;
+                --gutter: clamp(1.5rem, 4vw, 3rem);
+            }
+
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            html {
+                scroll-behavior: smooth;
+                -webkit-font-smoothing: antialiased;
+            }
+
+            body {
+                background: var(--bg);
+                color: var(--text);
+                font-family: var(--sans);
+                font-size: 17px;
+                line-height: 1.7;
+                overflow-x: hidden;
+            }
+
+            /* Tile grid background */
+            body::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                background-image:
+                    linear-gradient(rgba(232, 168, 76, 0.025) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(232, 168, 76, 0.025) 1px, transparent 1px);
+                background-size: 48px 48px;
+                pointer-events: none;
+                z-index: 0;
+            }
+
+            /* Grain overlay */
+            body::after {
+                content: "";
+                position: fixed;
+                inset: 0;
+                background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+                pointer-events: none;
+                z-index: 9999;
+            }
+
+            ::selection {
+                background: var(--amber);
+                color: var(--bg);
+            }
+
+            a {
+                color: var(--amber);
+                text-decoration: none;
+                transition: color 0.2s;
+            }
+            a:hover {
+                color: var(--text);
+            }
+
+            .container {
+                max-width: var(--max-w);
+                margin: 0 auto;
+                padding: 0 var(--gutter);
+            }
+
+            section {
+                padding: 5rem 0;
+                position: relative;
+                z-index: 1;
+            }
+
+            /* Ambient glows */
+            .glow {
+                position: fixed;
+                border-radius: 50%;
+                pointer-events: none;
+                z-index: 0;
+                filter: blur(120px);
+            }
+            .glow-1 {
+                width: 600px;
+                height: 600px;
+                background: var(--amber-glow);
+                top: -5%;
+                left: 55%;
+                animation: drift 28s ease-in-out infinite alternate;
+            }
+            .glow-2 {
+                width: 500px;
+                height: 500px;
+                background: var(--stone-dim);
+                bottom: 10%;
+                right: 60%;
+                opacity: 0.4;
+                animation: drift 34s ease-in-out infinite alternate-reverse;
+            }
+            @keyframes drift {
+                0% { transform: translate(0, 0); }
+                100% { transform: translate(50px, -40px); }
+            }
+
+            /* ─── NAV ─── */
+            nav {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 100;
+                background: rgba(9, 9, 13, 0.88);
+                backdrop-filter: blur(12px);
+                border-bottom: 1px solid var(--border);
+                padding: 0.75rem 0;
+            }
+            .nav-inner {
+                max-width: var(--max-w);
+                margin: 0 auto;
+                padding: 0 var(--gutter);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .nav-brand {
+                font-family: var(--serif);
+                font-size: 0.9rem;
+                font-weight: 600;
+                color: var(--text);
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .nav-brand .rune {
+                color: var(--amber);
+                margin-right: 0.3rem;
+                font-size: 1rem;
+            }
+            .nav-links {
+                display: flex;
+                gap: 1.5rem;
+                list-style: none;
+            }
+            .nav-links a {
+                font-family: var(--mono);
+                font-size: 0.7rem;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--dim);
+                transition: color 0.2s;
+            }
+            .nav-links a:hover {
+                color: var(--amber);
+            }
+            @media (max-width: 600px) {
+                .nav-links { gap: 0.75rem; }
+                .nav-links a { font-size: 0.6rem; }
+            }
+
+            /* ─── HERO ─── */
+            .hero {
+                padding-top: 11rem;
+                padding-bottom: 5rem;
+                text-align: center;
+                position: relative;
+                z-index: 1;
+            }
+            .hero-badge {
+                font-family: var(--mono);
+                font-size: 0.65rem;
+                letter-spacing: 0.08em;
+                color: var(--dim);
+                padding: 0.4rem 1rem;
+                border: 1px solid var(--border);
+                border-radius: 100px;
+                display: inline-block;
+                margin-bottom: 2rem;
+            }
+            .hero h1 {
+                font-family: var(--serif);
+                font-weight: 400;
+                font-size: clamp(2.4rem, 5.5vw, 4rem);
+                line-height: 1.15;
+                letter-spacing: 0.02em;
+                margin-bottom: 1.5rem;
+            }
+            .hero h1 em {
+                font-style: normal;
+                color: var(--amber);
+            }
+            .hero .subline {
+                font-size: 1.15rem;
+                color: var(--dim);
+                max-width: 620px;
+                margin: 0 auto 2.5rem;
+                line-height: 1.8;
+            }
+            .hero .cta-row {
+                display: flex;
+                gap: 0.75rem;
+                justify-content: center;
+                flex-wrap: wrap;
+                margin-bottom: 1.5rem;
+            }
+            .hero .rune-sequence {
+                font-size: 1.6rem;
+                color: var(--rune);
+                letter-spacing: 0.4em;
+                margin-top: 2.5rem;
+                opacity: 0.5;
+                font-weight: 300;
+            }
+
+            /* Buttons */
+            .btn {
+                font-family: var(--mono);
+                font-size: 0.72rem;
+                font-weight: 500;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                padding: 0.85rem 1.75rem;
+                border: none;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-decoration: none;
+                display: inline-block;
+            }
+            .btn-primary {
+                background: var(--amber);
+                color: var(--bg);
+            }
+            .btn-primary:hover {
+                color: var(--bg);
+                box-shadow: 0 4px 24px rgba(232, 168, 76, 0.35);
+                transform: translateY(-2px);
+            }
+            .btn-secondary {
+                background: transparent;
+                color: var(--amber);
+                border: 1px solid rgba(232, 168, 76, 0.3);
+            }
+            .btn-secondary:hover {
+                color: var(--text);
+                border-color: rgba(232, 168, 76, 0.6);
+                transform: translateY(-2px);
+            }
+            .btn-ghost {
+                background: transparent;
+                color: var(--dim);
+                border: 1px solid var(--border);
+            }
+            .btn-ghost:hover {
+                color: var(--text);
+                border-color: var(--border-2);
+                transform: translateY(-2px);
+            }
+
+            /* Section common */
+            .section-label {
+                font-family: var(--mono);
+                font-size: 0.65rem;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--amber);
+                margin-bottom: 2rem;
+                display: inline-block;
+                padding: 0.35rem 0.9rem;
+                border: 1px solid rgba(232, 168, 76, 0.2);
+                border-radius: 100px;
+                background: var(--amber-glow);
+            }
+            section h2 {
+                font-family: var(--serif);
+                font-weight: 400;
+                font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+                line-height: 1.2;
+                margin-bottom: 1.5rem;
+                letter-spacing: 0.01em;
+            }
+            section h2 em {
+                font-style: italic;
+                color: var(--amber);
+            }
+            .lead {
+                font-size: 1.05rem;
+                color: var(--dim);
+                max-width: 700px;
+                margin-bottom: 3rem;
+                line-height: 1.8;
+            }
+
+            /* ─── FORT DIAGRAM ─── */
+            .fort-diagram {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 2rem;
+                margin: 3rem 0;
+                font-family: var(--mono);
+                font-size: 0.72rem;
+                line-height: 1.9;
+                color: var(--dim);
+                overflow-x: auto;
+                white-space: pre;
+                position: relative;
+            }
+            .fort-diagram::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 2px;
+                background: linear-gradient(90deg, var(--amber), var(--rune), var(--stone));
+            }
+            .fort-diagram .room { color: var(--amber); }
+            .fort-diagram .rune { color: var(--rune); opacity: 0.7; }
+            .fort-diagram .wall { color: var(--muted); }
+            .fort-diagram .flow { color: var(--stone); }
+            .fort-diagram .label { color: var(--text); }
+
+            /* ─── ZOOM LEVELS ─── */
+            .zoom-grid {
+                display: grid;
+                grid-template-columns: repeat(5, 1fr);
+                gap: 1rem;
+                margin: 2.5rem 0;
+            }
+            @media (max-width: 900px) {
+                .zoom-grid { grid-template-columns: repeat(3, 1fr); }
+            }
+            @media (max-width: 550px) {
+                .zoom-grid { grid-template-columns: 1fr; }
+            }
+            .zoom-card {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 1.5rem 1.25rem;
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+                cursor: pointer;
+                user-select: none;
+            }
+            .zoom-card:hover {
+                border-color: var(--border-2);
+                transform: translateY(-3px);
+            }
+            .zoom-card::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 2px;
+                background: var(--amber);
+                opacity: 0.3;
+                transition: opacity 0.3s;
+            }
+            .zoom-card.active {
+                border-color: rgba(232, 168, 76, 0.4);
+                background: var(--surface-2);
+            }
+            .zoom-card.active::before {
+                opacity: 1;
+            }
+            .zoom-level {
+                font-family: var(--mono);
+                font-size: 0.65rem;
+                font-weight: 600;
+                letter-spacing: 0.06em;
+                color: var(--amber);
+                margin-bottom: 0.5rem;
+                transition: color 0.2s;
+            }
+            .zoom-card.active .zoom-level { color: var(--amber); }
+            .zoom-name {
+                font-family: var(--serif);
+                font-size: 1.1rem;
+                font-weight: 500;
+                margin-bottom: 0.5rem;
+                color: var(--text);
+            }
+            .zoom-desc {
+                font-size: 0.82rem;
+                color: var(--dim);
+                line-height: 1.6;
+            }
+
+            /* ─── ZOOM VIEWER (xterm + code panel) ─── */
+            .zoom-viewer {
+                position: relative;
+                margin: 2rem 0 0;
+                border-radius: 10px;
+                overflow: hidden;
+                border: 1px solid var(--border);
+            }
+            .zoom-viewer-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0.6rem 1.25rem;
+                background: var(--surface-2);
+                border-bottom: 1px solid var(--border);
+            }
+            .zoom-viewer-title {
+                font-family: var(--mono);
+                font-size: 0.65rem;
+                font-weight: 600;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--amber);
+            }
+            .zoom-viewer-lang {
+                font-family: var(--mono);
+                font-size: 0.6rem;
+                letter-spacing: 0.06em;
+                color: var(--muted);
+            }
+            .zoom-viewer-body {
+                position: relative;
+            }
+            #rot-container {
+                background: var(--surface);
+                display: flex;
+                justify-content: center;
+                padding: 1rem 0;
+                overflow-x: auto;
+            }
+            #rot-container canvas {
+                image-rendering: pixelated;
+            }
+
+            /* Code data section (hidden, holds JSON for Prism panels below) */
+            .zoom-data-panel {
+                position: relative;
+                margin: 1.25rem 0 0;
+                border-radius: 10px;
+                overflow: hidden;
+                border: 1px solid var(--border);
+            }
+            .zoom-data-panel .zoom-code {
+                display: none;
+                margin: 0;
+            }
+            .zoom-data-panel .zoom-code.active {
+                display: block;
+            }
+            .zoom-data-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0.6rem 1.25rem;
+                background: var(--surface-2);
+                border-bottom: 1px solid var(--border);
+            }
+            .zoom-data-title {
+                font-family: var(--mono);
+                font-size: 0.65rem;
+                font-weight: 600;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            .zoom-data-lang {
+                font-family: var(--mono);
+                font-size: 0.6rem;
+                letter-spacing: 0.06em;
+                color: var(--muted);
+            }
+
+            /* ─── PRISM OVERRIDES ─── */
+            pre[class*="language-"] {
+                background: var(--surface) !important;
+                margin: 0 !important;
+                padding: 1.5rem 1.25rem !important;
+                border-radius: 0 !important;
+                font-family: var(--mono) !important;
+                font-size: 0.78rem !important;
+                line-height: 1.8 !important;
+                border: none !important;
+                overflow-x: auto;
+            }
+            code[class*="language-"] {
+                font-family: var(--mono) !important;
+                font-size: 0.78rem !important;
+                text-shadow: none !important;
+            }
+            .token.comment,
+            .token.block-comment,
+            .token.prolog,
+            .token.doctype,
+            .token.cdata { color: var(--muted) !important; }
+            .token.property,
+            .token.tag,
+            .token.boolean,
+            .token.number,
+            .token.constant,
+            .token.symbol { color: var(--amber) !important; }
+            .token.string,
+            .token.char,
+            .token.attr-value,
+            .token.builtin { color: var(--stone) !important; }
+            .token.selector,
+            .token.attr-name,
+            .token.atrule,
+            .token.keyword { color: var(--rune) !important; }
+            .token.punctuation { color: var(--dim) !important; }
+            .token.operator,
+            .token.entity,
+            .token.url { color: var(--dim) !important; }
+            .token.function { color: var(--text) !important; }
+            ::selection { background: var(--amber) !important; color: var(--bg) !important; }
+
+            /* ─── THREE PILLARS ─── */
+            .pillar-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1.25rem;
+                margin: 2.5rem 0;
+            }
+            @media (max-width: 750px) {
+                .pillar-grid { grid-template-columns: 1fr; }
+            }
+            .pillar {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 2rem 1.75rem;
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            }
+            .pillar:hover {
+                border-color: var(--border-2);
+                transform: translateY(-3px);
+            }
+            .pillar::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 3px;
+                height: 100%;
+            }
+            .pillar:nth-child(1)::before { background: var(--amber); }
+            .pillar:nth-child(2)::before { background: var(--stone); }
+            .pillar:nth-child(3)::before { background: var(--rune); }
+            .pillar-icon {
+                font-size: 1.6rem;
+                margin-bottom: 1rem;
+            }
+            .pillar h3 {
+                font-family: var(--serif);
+                font-size: 1.15rem;
+                font-weight: 500;
+                margin-bottom: 0.75rem;
+            }
+            .pillar:nth-child(1) h3 { color: var(--amber); }
+            .pillar:nth-child(2) h3 { color: var(--stone); }
+            .pillar:nth-child(3) h3 { color: var(--rune); }
+            .pillar p {
+                font-size: 0.88rem;
+                color: var(--dim);
+                line-height: 1.7;
+            }
+
+            /* ─── DARK FACTORY ─── */
+            .dark-factory-split {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 2rem;
+                margin: 2.5rem 0;
+                align-items: start;
+            }
+            @media (max-width: 750px) {
+                .dark-factory-split { grid-template-columns: 1fr; }
+            }
+            .df-card {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 2rem;
+                position: relative;
+                overflow: hidden;
+            }
+            .df-card::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 2px;
+            }
+            .df-card.dark::before { background: var(--muted); }
+            .df-card.lit::before { background: var(--amber); }
+            .df-card h3 {
+                font-family: var(--mono);
+                font-size: 0.75rem;
+                font-weight: 600;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                margin-bottom: 1.25rem;
+            }
+            .df-card.dark h3 { color: var(--muted); }
+            .df-card.lit h3 { color: var(--amber); }
+            .df-card ul {
+                list-style: none;
+                padding: 0;
+            }
+            .df-card li {
+                font-size: 0.88rem;
+                color: var(--dim);
+                padding: 0.4rem 0;
+                border-bottom: 1px solid var(--border);
+                line-height: 1.6;
+            }
+            .df-card li:last-child { border-bottom: none; }
+            .df-card li .rune-glyph {
+                color: var(--rune);
+                margin-right: 0.5rem;
+                font-size: 0.95rem;
+            }
+
+            /* ─── OVERLAYS ─── */
+            .overlay-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 1rem;
+                margin: 2.5rem 0;
+            }
+            @media (max-width: 900px) {
+                .overlay-grid { grid-template-columns: repeat(2, 1fr); }
+            }
+            @media (max-width: 500px) {
+                .overlay-grid { grid-template-columns: 1fr; }
+            }
+            .overlay-card {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 1.25rem;
+                transition: all 0.3s ease;
+            }
+            .overlay-card:hover {
+                border-color: var(--border-2);
+            }
+            .overlay-key {
+                font-family: var(--mono);
+                font-size: 0.7rem;
+                font-weight: 600;
+                width: 1.8rem;
+                height: 1.8rem;
+                border: 1px solid var(--amber-dim);
+                border-radius: 4px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: var(--amber);
+                margin-bottom: 0.75rem;
+                background: var(--amber-glow);
+            }
+            .overlay-name {
+                font-family: var(--serif);
+                font-size: 0.95rem;
+                font-weight: 500;
+                margin-bottom: 0.35rem;
+                color: var(--text);
+            }
+            .overlay-desc {
+                font-size: 0.78rem;
+                color: var(--dim);
+                line-height: 1.5;
+            }
+
+            /* ─── COMPONENT TABLE ─── */
+            .component-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 2.5rem 0;
+                font-size: 0.85rem;
+            }
+            .component-table th {
+                font-family: var(--mono);
+                font-size: 0.65rem;
+                font-weight: 600;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--dim);
+                text-align: left;
+                padding: 0.75rem 1rem;
+                border-bottom: 1px solid var(--border-2);
+            }
+            .component-table td {
+                padding: 0.75rem 1rem;
+                border-bottom: 1px solid var(--border);
+                vertical-align: top;
+            }
+            .component-table tr:hover td {
+                background: var(--surface);
+            }
+            .component-table .comp-name {
+                font-family: var(--mono);
+                color: var(--amber);
+                font-size: 0.8rem;
+                white-space: nowrap;
+            }
+            .component-table .comp-role {
+                color: var(--text);
+            }
+            .component-table .comp-rule {
+                color: var(--dim);
+                font-size: 0.8rem;
+            }
+
+            /* ─── ECOSYSTEM ─── */
+            .eco-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1rem;
+                margin: 2.5rem 0;
+            }
+            @media (max-width: 750px) {
+                .eco-grid { grid-template-columns: repeat(2, 1fr); }
+            }
+            @media (max-width: 500px) {
+                .eco-grid { grid-template-columns: 1fr; }
+            }
+            .eco-card {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 1.25rem;
+                transition: all 0.3s ease;
+            }
+            .eco-card:hover {
+                border-color: var(--border-2);
+                transform: translateY(-2px);
+            }
+            .eco-rune {
+                color: var(--rune);
+                font-size: 1.1rem;
+                margin-bottom: 0.5rem;
+                display: block;
+            }
+            .eco-name {
+                font-family: var(--serif);
+                font-size: 0.95rem;
+                font-weight: 500;
+                margin-bottom: 0.25rem;
+                color: var(--text);
+            }
+            .eco-role {
+                font-size: 0.78rem;
+                color: var(--dim);
+            }
+
+            /* ─── MATURITY LEVELS ─── */
+            .maturity-strip {
+                display: flex;
+                gap: 0;
+                margin: 2.5rem 0;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            @media (max-width: 750px) {
+                .maturity-strip { flex-direction: column; }
+            }
+            .maturity-level {
+                flex: 1;
+                padding: 1.25rem 1rem;
+                border-right: 1px solid var(--border);
+                background: var(--surface);
+                transition: background 0.2s;
+            }
+            .maturity-level:last-child { border-right: none; }
+            .maturity-level:hover { background: var(--surface-2); }
+            .maturity-level.active {
+                background: var(--surface-2);
+                border-bottom: 2px solid var(--amber);
+            }
+            .maturity-num {
+                font-family: var(--mono);
+                font-size: 0.65rem;
+                color: var(--muted);
+                margin-bottom: 0.25rem;
+            }
+            .maturity-level.active .maturity-num { color: var(--amber); }
+            .maturity-title {
+                font-family: var(--serif);
+                font-size: 0.85rem;
+                font-weight: 500;
+                color: var(--dim);
+                margin-bottom: 0.25rem;
+            }
+            .maturity-level.active .maturity-title { color: var(--text); }
+            .maturity-desc {
+                font-size: 0.72rem;
+                color: var(--muted);
+                line-height: 1.4;
+            }
+            .maturity-level.active .maturity-desc { color: var(--dim); }
+
+            /* ─── QUOTE ─── */
+            .pullquote {
+                border-left: 3px solid var(--amber);
+                padding: 1.5rem 2rem;
+                margin: 3rem 0;
+                background: var(--surface);
+                border-radius: 0 8px 8px 0;
+            }
+            .pullquote p {
+                font-family: var(--serif);
+                font-size: clamp(1.1rem, 2vw, 1.4rem);
+                font-style: italic;
+                color: var(--text);
+                line-height: 1.6;
+            }
+            .pullquote .attr {
+                font-family: var(--mono);
+                font-size: 0.7rem;
+                color: var(--dim);
+                margin-top: 0.75rem;
+                font-style: normal;
+            }
+
+            /* ─── FOOTER ─── */
+            footer {
+                border-top: 1px solid var(--border);
+                padding: 3rem 0;
+                position: relative;
+                z-index: 1;
+            }
+            .footer-inner {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+            .footer-brand {
+                font-family: var(--serif);
+                font-size: 0.85rem;
+                font-weight: 600;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            .footer-brand .rune { color: var(--rune); margin-right: 0.3rem; }
+            .footer-links {
+                display: flex;
+                gap: 1.5rem;
+                list-style: none;
+            }
+            .footer-links a {
+                font-family: var(--mono);
+                font-size: 0.7rem;
+                letter-spacing: 0.06em;
+                color: var(--muted);
+                transition: color 0.2s;
+            }
+            .footer-links a:hover { color: var(--amber); }
+            .footer-copy {
+                width: 100%;
+                text-align: center;
+                font-size: 0.75rem;
+                color: var(--muted);
+                margin-top: 1.5rem;
+                padding-top: 1.5rem;
+                border-top: 1px solid var(--border);
+            }
+            .footer-runes {
+                font-size: 1rem;
+                letter-spacing: 0.5em;
+                color: var(--rune);
+                opacity: 0.3;
+                margin-top: 0.75rem;
+            }
+
+            /* Section dividers */
+            .section-border { border-top: 1px solid var(--border); }
+
+            /* ─── B2B PATTERN ─── */
+            .b2b-visual {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 2rem;
+                margin: 2.5rem 0;
+                text-align: center;
+            }
+            .b2b-visual pre {
+                font-family: var(--mono);
+                font-size: 0.72rem;
+                line-height: 1.8;
+                color: var(--dim);
+                display: inline-block;
+                text-align: left;
+            }
+            .b2b-visual .your-fort { color: var(--amber); }
+            .b2b-visual .partner-fort { color: var(--muted); }
+            .b2b-visual .bridge { color: var(--stone); }
+            .b2b-visual .token { color: var(--rune); }
+        </style>
+    </head>
+
+    <body>
+        <!-- Ambient glows -->
+        <div class="glow glow-1"></div>
+        <div class="glow glow-2"></div>
+
+        <!-- Navigation -->
+        <nav>
+            <div class="nav-inner">
+                <a href="#" class="nav-brand"><span class="rune">ᚲ</span> RuneFort</a>
+                <ul class="nav-links">
+                    <li><a href="#vision">Vision</a></li>
+                    <li><a href="#zoom">Zoom</a></li>
+                    <li><a href="#dark-factory">Dark Factory</a></li>
+                    <li><a href="#overlays">Overlays</a></li>
+                    <li><a href="#ecosystem">Ecosystem</a></li>
+                    <li><a href="https://github.com/c-u-l8er/runefort" target="_blank" rel="noopener">GitHub</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Hero -->
+        <header class="hero container">
+            <div class="hero-badge">Part of the [&] Protocol ecosystem</div>
+            <h1>Walk through your<br /><em>autonomous workflows</em></h1>
+            <p class="subline">
+                Dark factories run with the lights off. RuneFort turns them back on &mdash;
+                not with dashboards, but with a place you can walk through.
+            </p>
+            <div class="cta-row">
+                <a href="#vision" class="btn btn-primary">Explore the Fort</a>
+                <a href="https://github.com/c-u-l8er/runefort" class="btn btn-secondary" target="_blank" rel="noopener">View Source</a>
+            </div>
+            <div class="rune-sequence">ᚲ ᚨ ᚠ ᛃ ᛞ</div>
+        </header>
+
+        <!-- Vision -->
+        <section id="vision" class="section-border">
+            <div class="container">
+                <span class="section-label">Vision</span>
+                <h2>Every loop is <em>a building</em></h2>
+                <p class="lead">
+                    RuneFort renders any PULSE-declared closed loop as a navigable fort &mdash; a blueprint-style
+                    floor plan where rooms are cognitive domains, corridors are data flows, walls are policies,
+                    and the hidden rune machinery inside the walls is the actual operational code.
+                </p>
+
+                <div class="pillar-grid">
+                    <div class="pillar">
+                        <div class="pillar-icon">ᚲ</div>
+                        <h3>[&] Protocol</h3>
+                        <p>
+                            Structural composition. Defines what capabilities a fort contains.
+                            The construction material &mdash; stones, doors, and mechanisms that forts are built from.
+                        </p>
+                    </div>
+                    <div class="pillar">
+                        <div class="pillar-icon">ᛊ</div>
+                        <h3>PULSE</h3>
+                        <p>
+                            Temporal declaration. Defines the fort's heartbeat, phases, and cadence.
+                            The clocktower mechanism beating inside every fort.
+                        </p>
+                    </div>
+                    <div class="pillar">
+                        <div class="pillar-icon">ᛉ</div>
+                        <h3>PRISM</h3>
+                        <p>
+                            Diagnostic measurement. Measures the fort's health from watchtowers.
+                            Nine continual learning dimensions, scored and visualized.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="pullquote">
+                    <p>The fort is what you understand. The runes are what you inspect.</p>
+                    <div class="attr">&mdash; The Minecraft Rule: one primitive composes into any cognitive architecture</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Zoom Levels -->
+        <section id="zoom" class="section-border">
+            <div class="container">
+                <span class="section-label">Semantic Zoom</span>
+                <h2>Five levels of <em>resolution</em></h2>
+                <p class="lead">
+                    The same tile grid renders differently at each level. Zooming in reveals more;
+                    zooming out collapses detail into summary. No special-case rendering &mdash; one primitive, infinite depth.
+                </p>
+
+                <div class="zoom-grid" id="zoom-selector">
+                    <div class="zoom-card active" data-level="0" onclick="selectZoom(0)">
+                        <div class="zoom-level">L0</div>
+                        <div class="zoom-name">District</div>
+                        <div class="zoom-desc">Multiple forts on a shared landscape. The full ecosystem at a glance.</div>
+                    </div>
+                    <div class="zoom-card" data-level="1" onclick="selectZoom(1)">
+                        <div class="zoom-level">L1</div>
+                        <div class="zoom-name">Campus</div>
+                        <div class="zoom-desc">Single fort. All wings and zones visible. Room labels from phases.</div>
+                    </div>
+                    <div class="zoom-card" data-level="2" onclick="selectZoom(2)">
+                        <div class="zoom-level">L2</div>
+                        <div class="zoom-name">Wing</div>
+                        <div class="zoom-desc">Rooms within a zone. Connections between them. Node clusters and edge topology.</div>
+                    </div>
+                    <div class="zoom-card" data-level="3" onclick="selectZoom(3)">
+                        <div class="zoom-level">L3</div>
+                        <div class="zoom-name">Room</div>
+                        <div class="zoom-desc">Individual nodes, edges, confidence values. The data breathing inside.</div>
+                    </div>
+                    <div class="zoom-card" data-level="4" onclick="selectZoom(4)">
+                        <div class="zoom-level">L4</div>
+                        <div class="zoom-name">Rune</div>
+                        <div class="zoom-desc">Single operation. The dark code inside a wall. Causal provenance, config.</div>
+                    </div>
+                </div>
+
+                <!-- Interactive zoom viewer — xterm blueprint -->
+                <div class="zoom-viewer">
+                    <div class="zoom-viewer-header">
+                        <span class="zoom-viewer-title" id="zoom-viewer-title">L0 — District View</span>
+                        <span class="zoom-viewer-lang" id="zoom-viewer-lang">blueprint</span>
+                    </div>
+                    <div class="zoom-viewer-body">
+                        <div id="rot-container"></div>
+                    </div>
+                </div>
+
+                <!-- Data panel — Prism-highlighted JSON for each level -->
+                <div class="zoom-data-panel">
+                    <div class="zoom-data-header">
+                        <span class="zoom-data-title" id="zoom-data-title">District Manifest</span>
+                        <span class="zoom-data-lang">json</span>
+                    </div>
+
+                        <!-- L0: District — multi-fort layout (JSON) -->
+                        <pre class="zoom-code active" id="zoom-code-0"><code class="language-json">{
+  "district": "runefort_ecosystem",
+  "forts": [
+    { "id": "graphonomous",  "loop": "graphonomous.memory_loop",      "schema": "(sqlite)" },
+    { "id": "webhost",       "loop": "webhost.deploy_invoke",         "schema": "webhost.*" },
+    { "id": "bendscript",    "loop": "bendscript.knowledge_edit",     "schema": "kag.*" },
+    { "id": "agentromatic",  "loop": "agentromatic.deliberation",     "schema": "orchestrate.*" },
+    { "id": "delegatic",     "loop": "delegatic.governance",          "schema": "govern.*" },
+    { "id": "agentelic",     "loop": "agentelic.build_pipeline",      "schema": "agentelic.*" },
+    { "id": "fleetprompt",   "loop": "fleetprompt.marketplace",       "schema": "fleet.*" },
+    { "id": "geofleetic",    "loop": "geofleetic.fleet_learning",     "schema": "geo.*" },
+    { "id": "ticktickclock", "loop": "ticktickclock.temporal_learning","schema": "temporal.*" }
+  ],
+  "shared_ground": {
+    "schema": "amp.*",
+    "tables": ["profiles", "workspaces", "members", "entitlements"]
+  },
+  "bridges": [
+    { "from": "graphonomous",  "to": "prism",       "tokens": ["OutcomeSignal"] },
+    { "from": "prism",         "to": "fleetprompt",  "tokens": ["ReputationUpdate"] },
+    { "from": "agentromatic",  "to": "prism",        "tokens": ["OutcomeSignal"] },
+    { "from": "deliberatic",   "to": "agentromatic", "tokens": ["DeliberationResult"] },
+    { "from": "delegatic",     "to": "*",            "tokens": ["PolicyEnforcement"] },
+    { "from": "agentelic",     "to": "fleetprompt",  "tokens": ["AgentPublish"] },
+    { "from": "agentelic",     "to": "webhost",      "tokens": ["Deploy"] }
+  ],
+  "bedrock": "opensentience (OS-001 through OS-010)"
+}</code></pre>
+
+                        <!-- L1: Campus — single fort PULSE manifest (JSON) -->
+                        <pre class="zoom-code" id="zoom-code-1"><code class="language-json">{
+  "pulse_version": "0.1",
+  "loop_id": "graphonomous.memory_loop",
+  "version": "0.4.0",
+  "description": "Continual learning memory loop — 5 phase machines",
+  "phases": [
+    {
+      "id": "retrieve_context",
+      "kind": "retrieve",
+      "description": "Fetch relevant nodes, edges, and topology from the knowledge graph",
+      "inputs": ["query", "workspace_id"],
+      "outputs": ["context_nodes", "topology"],
+      "timeout_ms": 5000
+    },
+    {
+      "id": "route_topology",
+      "kind": "route",
+      "description": "Analyze SCC topology, compute κ, decide fast-path or deliberation",
+      "inputs": ["context_nodes", "topology"],
+      "outputs": ["routing_decision", "kappa_value"],
+      "timeout_ms": 1000
+    },
+    {
+      "id": "act_mutate",
+      "kind": "act",
+      "description": "Store nodes, update edges, mutate the knowledge graph",
+      "inputs": ["routing_decision", "new_knowledge"],
+      "outputs": ["stored_nodes", "updated_edges"],
+      "timeout_ms": 3000
+    },
+    {
+      "id": "learn_outcome",
+      "kind": "learn",
+      "description": "Close the feedback loop — report outcomes, update confidence",
+      "inputs": ["action_result", "outcome_signal"],
+      "outputs": ["confidence_deltas", "belief_updates"],
+      "timeout_ms": 2000
+    },
+    {
+      "id": "consolidate_idle",
+      "kind": "consolidate",
+      "description": "Merge similar nodes, prune decay, strengthen co-activated paths",
+      "inputs": ["graph_state", "decay_thresholds"],
+      "outputs": ["merged_nodes", "pruned_nodes", "promoted_nodes"],
+      "timeout_ms": 30000
+    }
+  ],
+  "substrates": {
+    "memory": "sqlite://graphonomous.db",
+    "policy": "delegatic://workspace/{ws_id}",
+    "time": "ticktickclock://workspace/{ws_id}"
+  },
+  "invariants": {
+    "phase_atomicity": true,
+    "feedback_immutability": true,
+    "kappa_routing": true,
+    "outcome_grounding": true
+  }
+}</code></pre>
+
+                        <!-- L2: Wing — room detail with node clusters (JSON) -->
+                        <pre class="zoom-code" id="zoom-code-2"><code class="language-json">{
+  "wing": "retrieve",
+  "fort": "graphonomous.memory_loop",
+  "rooms": [
+    {
+      "id": "semantic_memory",
+      "tile_count": 42,
+      "node_types": ["semantic", "procedural"],
+      "avg_confidence": 0.82,
+      "activity": 0.91,
+      "state": "active",
+      "edges_out": ["causal_reasoning", "goal_tracking"]
+    },
+    {
+      "id": "causal_reasoning",
+      "tile_count": 18,
+      "node_types": ["causal", "outcome"],
+      "avg_confidence": 0.67,
+      "activity": 0.74,
+      "state": "pulsing",
+      "edges_out": ["semantic_memory", "deliberation_corridor"]
+    },
+    {
+      "id": "episodic_buffer",
+      "tile_count": 31,
+      "node_types": ["episodic", "temporal"],
+      "avg_confidence": 0.55,
+      "activity": 0.23,
+      "state": "idle",
+      "edges_out": ["semantic_memory"]
+    },
+    {
+      "id": "goal_tracking",
+      "tile_count": 8,
+      "node_types": ["goal"],
+      "avg_confidence": 0.78,
+      "activity": 0.65,
+      "state": "active",
+      "edges_out": ["semantic_memory", "causal_reasoning"]
+    }
+  ],
+  "corridors": [
+    { "from": "semantic_memory", "to": "causal_reasoning", "weight": 0.88 },
+    { "from": "episodic_buffer", "to": "semantic_memory", "weight": 0.41 },
+    { "from": "goal_tracking", "to": "causal_reasoning", "weight": 0.72 }
+  ],
+  "gates": [
+    { "id": "kappa_gate", "filter": "κ > 0 → deliberation_corridor", "state": "open" }
+  ]
+}</code></pre>
+
+                        <!-- L3: Room — individual nodes and edges (JSON) -->
+                        <pre class="zoom-code" id="zoom-code-3"><code class="language-json">{
+  "room": "semantic_memory",
+  "wing": "retrieve",
+  "fort": "graphonomous.memory_loop",
+  "nodes": [
+    {
+      "id": "node_a7f3c",
+      "type": "semantic",
+      "content": "RuneFort renders PULSE loops as navigable forts",
+      "confidence": 0.94,
+      "timescale": "slow",
+      "access_count": 47,
+      "last_accessed": "2026-04-14T09:12:00Z",
+      "decay_rate": 0.002,
+      "tags": ["runefort", "visualization", "pulse"]
+    },
+    {
+      "id": "node_b2e81",
+      "type": "semantic",
+      "content": "Dark factories need spatial observability for governance",
+      "confidence": 0.71,
+      "timescale": "medium",
+      "access_count": 12,
+      "last_accessed": "2026-04-14T08:45:00Z",
+      "decay_rate": 0.01,
+      "tags": ["dark-factory", "observability", "governance"]
+    },
+    {
+      "id": "node_c9d44",
+      "type": "procedural",
+      "content": "Parse PULSE manifest → generate fort skeleton → populate rooms",
+      "confidence": 0.88,
+      "timescale": "slow",
+      "access_count": 33,
+      "last_accessed": "2026-04-14T09:10:00Z",
+      "decay_rate": 0.003,
+      "tags": ["pipeline", "fort-generation"]
+    }
+  ],
+  "edges": [
+    { "from": "node_a7f3c", "to": "node_b2e81", "type": "supports",    "weight": 0.76 },
+    { "from": "node_a7f3c", "to": "node_c9d44", "type": "derived_from", "weight": 0.91 },
+    { "from": "node_b2e81", "to": "node_c9d44", "type": "related",      "weight": 0.52 }
+  ],
+  "metrics": {
+    "total_nodes": 42,
+    "avg_confidence": 0.82,
+    "scc_count": 2,
+    "kappa": 0
+  }
+}</code></pre>
+
+                        <!-- L4: Rune — single operation dark code (JSON) -->
+                        <pre class="zoom-code" id="zoom-code-4"><code class="language-json">{
+  "rune": "ᚲ",
+  "rune_name": "Kaunan",
+  "meaning": "torch / knowledge — illuminating what is known",
+  "operation": "retrieve_context",
+  "phase": {
+    "id": "retrieve_context",
+    "kind": "retrieve",
+    "machine": "retrieve"
+  },
+  "invocation": {
+    "tool": "graphonomous.retrieve",
+    "action": "context",
+    "params": {
+      "query": "dark factory spatial observability governance",
+      "workspace_id": "ws_runefort_01",
+      "max_nodes": 50,
+      "min_confidence": 0.3,
+      "include_topology": true
+    }
+  },
+  "execution": {
+    "duration_ms": 142,
+    "nodes_returned": 12,
+    "edges_returned": 28,
+    "topology": {
+      "sccs": [
+        { "id": "scc_0", "nodes": ["node_a7f3c", "node_b2e81"], "kappa": 0 },
+        { "id": "scc_1", "nodes": ["node_d1f22", "node_e3a99", "node_f7b11"], "kappa": 1 }
+      ],
+      "routing": "deliberate",
+      "reason": "κ=1 detected in scc_1 — cyclic belief requires deliberation"
+    }
+  },
+  "causal_provenance": {
+    "triggered_by": "user_query",
+    "trace_id": "tr_2026-04-14_091200_a7f3c",
+    "parent_phase": null,
+    "child_phases": ["route_topology"]
+  },
+  "rune_sequence": "ᚲ → ᚨ → ᚱ → ᚠ",
+  "rune_sequence_name": "retrieve → route → deliberate → act"
+}</code></pre>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Dark Factory -->
+        <section id="dark-factory" class="section-border">
+            <div class="container">
+                <span class="section-label">Dark Factory</span>
+                <h2>Your factory runs in the dark.<br /><em>RuneFort turns the lights on.</em></h2>
+                <p class="lead">
+                    Autonomous software factories &mdash; spec in, tested code out, no human in the loop &mdash;
+                    are real and shipping production code today. The question is no longer
+                    &ldquo;can agents build software?&rdquo; but &ldquo;can you see what they're doing?&rdquo;
+                </p>
+
+                <!-- Maturity strip -->
+                <div class="maturity-strip">
+                    <div class="maturity-level">
+                        <div class="maturity-num">L0</div>
+                        <div class="maturity-title">Manual</div>
+                        <div class="maturity-desc">Human writes everything</div>
+                    </div>
+                    <div class="maturity-level">
+                        <div class="maturity-num">L1</div>
+                        <div class="maturity-title">Delegation</div>
+                        <div class="maturity-desc">AI handles discrete tasks</div>
+                    </div>
+                    <div class="maturity-level">
+                        <div class="maturity-num">L2</div>
+                        <div class="maturity-title">Pairing</div>
+                        <div class="maturity-desc">AI copilot, human drives</div>
+                    </div>
+                    <div class="maturity-level">
+                        <div class="maturity-num">L3</div>
+                        <div class="maturity-title">Review</div>
+                        <div class="maturity-desc">AI writes, human reviews</div>
+                    </div>
+                    <div class="maturity-level active">
+                        <div class="maturity-num">L4</div>
+                        <div class="maturity-title">Spec-Driven</div>
+                        <div class="maturity-desc">Specs in, code out</div>
+                    </div>
+                    <div class="maturity-level active">
+                        <div class="maturity-num">L5</div>
+                        <div class="maturity-title">Dark Factory</div>
+                        <div class="maturity-desc">Fully autonomous</div>
+                    </div>
+                </div>
+
+                <div class="dark-factory-split">
+                    <div class="df-card dark">
+                        <h3>The dark factory</h3>
+                        <ul>
+                            <li>Specs go in, tested software comes out</li>
+                            <li>No human writes or reviews code</li>
+                            <li>Holdout validation separates train/test</li>
+                            <li>Graph-structured agent pipelines</li>
+                            <li>Digital twin universes for integration</li>
+                            <li>Production code shipping today</li>
+                        </ul>
+                    </div>
+                    <div class="df-card lit">
+                        <h3>RuneFort adds</h3>
+                        <ul>
+                            <li><span class="rune-glyph">ᚲ</span> Spatial observability &mdash; walk through the pipeline</li>
+                            <li><span class="rune-glyph">ᛏ</span> Governance walls &mdash; Delegatic policy enforcement</li>
+                            <li><span class="rune-glyph">ᛉ</span> Diagnostic watchtowers &mdash; PRISM anomaly detection</li>
+                            <li><span class="rune-glyph">ᚷ</span> Bridge visibility &mdash; see tokens cross system boundaries</li>
+                            <li><span class="rune-glyph">ᚹ</span> Trust scoring &mdash; FleetPrompt reputation on every agent</li>
+                            <li><span class="rune-glyph">ᛃ</span> Learning feedback &mdash; the fort improves with every cycle</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- B2B visual -->
+                <div class="b2b-visual">
+                    <pre>
+<span class="your-fort">┌─ Your Fort ─────────────────┐</span>       <span class="partner-fort">┌─ Partner Fort ──────┐</span>
+<span class="your-fort">│  ┌─Retrieve─┐  ┌─Route──┐  │</span>       <span class="partner-fort">│  ┏━━━━━━━━━━━━━━┓  │</span>
+<span class="your-fort">│  │ ᚲ nodes  │  │ ᚨ κ=0  │  │</span>       <span class="partner-fort">│  ┃              ┃  │</span>
+<span class="your-fort">│  └──────────┘  └────────┘  │</span>       <span class="partner-fort">│  ┃   ░░░░░░░░   ┃  │</span>
+<span class="your-fort">│  ┌─Act──────┐  ┌─Learn──┐  │</span> <span class="bridge">═══</span><span class="token">ᚷ</span><span class="bridge">═══</span> <span class="partner-fort">│  ┃   opaque     ┃  │</span>
+<span class="your-fort">│  │ ᚠ store  │  │ ᛃ feed │  │</span>       <span class="partner-fort">│  ┃              ┃  │</span>
+<span class="your-fort">│  └──────────┘  └────────┘  │</span>       <span class="partner-fort">│  ┗━━━━━━━━━━━━━━┛  │</span>
+<span class="your-fort">└─────────────────────────────┘</span>       <span class="partner-fort">└─────────────────────┘</span>
+   <span class="your-fort">full visibility</span>               <span class="bridge">bridge</span>        <span class="partner-fort">walls + gates only</span></pre>
+                </div>
+                <p style="color: var(--dim); font-size: 0.88rem; max-width: 700px;">
+                    <strong style="color: var(--text);">B2B privacy boundary:</strong>
+                    You see full detail inside your own fort. Partner forts appear as opaque shapes &mdash;
+                    outer walls, gates, and bridge connections, but never their rooms.
+                    The same fort, different access levels.
+                </p>
+            </div>
+        </section>
+
+        <!-- Overlays -->
+        <section id="overlays" class="section-border">
+            <div class="container">
+                <span class="section-label">Overlays</span>
+                <h2>Same floor plan, <em>different lenses</em></h2>
+                <p class="lead">
+                    Architects have used transparent overlay sheets for centuries &mdash; structural, electrical,
+                    plumbing, HVAC on the same blueprint. RuneFort does the same for cognitive systems.
+                </p>
+
+                <div class="overlay-grid">
+                    <div class="overlay-card">
+                        <div class="overlay-key">&mdash;</div>
+                        <div class="overlay-name">Structure</div>
+                        <div class="overlay-desc">Rooms, walls, corridors, gates, towers. Always on.</div>
+                    </div>
+                    <div class="overlay-card">
+                        <div class="overlay-key">F</div>
+                        <div class="overlay-name">Flow</div>
+                        <div class="overlay-desc">Animated arrows showing data and token movement through phases.</div>
+                    </div>
+                    <div class="overlay-card">
+                        <div class="overlay-key">T</div>
+                        <div class="overlay-name">Thermal</div>
+                        <div class="overlay-desc">Activity heatmap. Hot rooms are busy, cold rooms are dormant.</div>
+                    </div>
+                    <div class="overlay-card">
+                        <div class="overlay-key">P</div>
+                        <div class="overlay-name">Temporal</div>
+                        <div class="overlay-desc">PULSE timing. Which rooms are in which phase right now.</div>
+                    </div>
+                    <div class="overlay-card">
+                        <div class="overlay-key">D</div>
+                        <div class="overlay-name">Diagnostic</div>
+                        <div class="overlay-desc">PRISM scores, anomaly markers, failure clusters.</div>
+                    </div>
+                    <div class="overlay-card">
+                        <div class="overlay-key">R</div>
+                        <div class="overlay-name">Rune</div>
+                        <div class="overlay-desc">The dark code. Operation configs, policy rules, causal chains.</div>
+                    </div>
+                    <div class="overlay-card">
+                        <div class="overlay-key">C</div>
+                        <div class="overlay-name">Confidence</div>
+                        <div class="overlay-desc">Node confidence heatmap. Bright is high, dim is low.</div>
+                    </div>
+                    <div class="overlay-card">
+                        <div class="overlay-key">K</div>
+                        <div class="overlay-name">Topology</div>
+                        <div class="overlay-desc">SCC highlighting, kappa values, cycle visualization.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Components -->
+        <section id="components" class="section-border">
+            <div class="container">
+                <span class="section-label">9 Primitives</span>
+                <h2>One tile composes <em>into anything</em></h2>
+                <p class="lead">
+                    The Minecraft constraint: everything is made of the same primitive. A room is tiles with shared borders.
+                    A corridor is tiles in a line. A tower is tiles that stack. No special-case rendering.
+                </p>
+
+                <table class="component-table">
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th>Fort Role</th>
+                            <th>Composition</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="comp-name">&lt;RuneTile&gt;</td>
+                            <td class="comp-role">Any single cell</td>
+                            <td class="comp-rule">Atomic &mdash; the primitive</td>
+                        </tr>
+                        <tr>
+                            <td class="comp-name">&lt;RuneRoom&gt;</td>
+                            <td class="comp-role">A cognitive domain</td>
+                            <td class="comp-rule">Bordered tile group</td>
+                        </tr>
+                        <tr>
+                            <td class="comp-name">&lt;RuneHall&gt;</td>
+                            <td class="comp-role">A data flow path</td>
+                            <td class="comp-rule">Linear tile sequence</td>
+                        </tr>
+                        <tr>
+                            <td class="comp-name">&lt;RuneTower&gt;</td>
+                            <td class="comp-role">Observation point</td>
+                            <td class="comp-rule">Vertically stacked tiles</td>
+                        </tr>
+                        <tr>
+                            <td class="comp-name">&lt;RuneGate&gt;</td>
+                            <td class="comp-role">Router or checkpoint</td>
+                            <td class="comp-rule">Tile with filter state</td>
+                        </tr>
+                        <tr>
+                            <td class="comp-name">&lt;RuneWall&gt;</td>
+                            <td class="comp-role">Policy boundary</td>
+                            <td class="comp-rule">Barrier tile sequence</td>
+                        </tr>
+                        <tr>
+                            <td class="comp-name">&lt;RuneFort&gt;</td>
+                            <td class="comp-role">One cognitive system</td>
+                            <td class="comp-rule">Root container (fractal &mdash; forts nest inside rooms)</td>
+                        </tr>
+                        <tr>
+                            <td class="comp-name">&lt;RuneBridge&gt;</td>
+                            <td class="comp-role">Inter-system exchange</td>
+                            <td class="comp-rule">Fort-to-fort connection</td>
+                        </tr>
+                        <tr>
+                            <td class="comp-name">&lt;RuneDistrict&gt;</td>
+                            <td class="comp-role">Full ecosystem view</td>
+                            <td class="comp-rule">Multi-fort layout</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Runes -->
+        <section id="runes" class="section-border">
+            <div class="container">
+                <span class="section-label">The Rune Layer</span>
+                <h2>Hidden machinery <em>inside the walls</em></h2>
+                <p class="lead">
+                    Runes are the machine language. The blueprint is the human language.
+                    The fort should be immediately legible to anyone &mdash; &ldquo;that's a room, that's a hallway,
+                    that's a locked door.&rdquo; Runes reward deeper inspection but never gatekeep understanding.
+                </p>
+
+                <div class="pillar-grid">
+                    <div class="pillar">
+                        <div class="pillar-icon" style="font-size: 1.2rem; letter-spacing: 0.2em;">ᚲᚨᚠ</div>
+                        <h3>Fast Path</h3>
+                        <p>
+                            Retrieve &rarr; Route &rarr; Act. The standard execution path through a fort.
+                            No deliberation needed, knowledge flows directly to action.
+                        </p>
+                    </div>
+                    <div class="pillar">
+                        <div class="pillar-icon" style="font-size: 1.2rem; letter-spacing: 0.2em;">ᚲᚨᚱᚠ</div>
+                        <h3>Deliberation Path</h3>
+                        <p>
+                            When &kappa; &gt; 0, cyclic knowledge triggers deliberation.
+                            The corridor pulses. Evidence is weighed. Only then: action.
+                        </p>
+                    </div>
+                    <div class="pillar">
+                        <div class="pillar-icon" style="font-size: 1.2rem; letter-spacing: 0.2em;">ᚺᛉᛗ</div>
+                        <h3>Escalation Path</h3>
+                        <p>
+                            Disruption detected &rarr; diagnostic shielding &rarr; human escalation.
+                            The tower fires. Someone gets paged.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="fort-diagram" style="text-align: center; white-space: normal; line-height: 2.5; font-size: 1rem; letter-spacing: 0.15em; padding: 2.5rem;">
+                    <span class="room" title="Kaunan — torch/knowledge — retrieve">ᚲ</span>
+                    <span class="rune" title="Ansuz — signal — route">ᚨ</span>
+                    <span class="room" title="Fehu — wealth/store — act">ᚠ</span>
+                    <span class="rune" title="Jera — harvest — learn">ᛃ</span>
+                    <span class="room" title="Dagaz — dawn — consolidate">ᛞ</span>
+                    &ensp;
+                    <span class="rune" title="Algiz — protection — PRISM">ᛉ</span>
+                    <span class="room" title="Raidho — journey — deliberation">ᚱ</span>
+                    <span class="rune" title="Tiwaz — justice — governance">ᛏ</span>
+                    <span class="room" title="Sowilo — sun — PULSE cadence">ᛊ</span>
+                    <span class="rune" title="Perthro — mystery — epistemic frontier">ᛈ</span>
+                    &ensp;
+                    <span class="room" title="Thurisaz — thorn — access denial">ᚦ</span>
+                    <span class="rune" title="Uruz — strength — edge weight">ᚢ</span>
+                    <span class="room" title="Gebo — gift — bridge token">ᚷ</span>
+                    <span class="rune" title="Wunjo — harmony — consensus">ᚹ</span>
+                    <span class="room" title="Haglaz — disruption — anomaly">ᚺ</span>
+                    &ensp;
+                    <span class="rune" title="Naudiz — constraint — boundary">ᚾ</span>
+                    <span class="room" title="Isa — ice — sealed memory">ᛁ</span>
+                    <span class="rune" title="Eihwaz — endurance — glacial">ᛇ</span>
+                    <span class="room" title="Berkanan — growth — promotion">ᛒ</span>
+                    <span class="rune" title="Ehwaz — movement — data flow">ᛖ</span>
+                    &ensp;
+                    <span class="room" title="Mannaz — human — escalation">ᛗ</span>
+                    <span class="rune" title="Laguz — water — stream processing">ᛚ</span>
+                    <span class="room" title="Ingwaz — seed — goal node">ᛜ</span>
+                    <span class="rune" title="Othala — heritage — workspace root">ᛟ</span>
+                    <br />
+                    <span style="font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.06em; color: var(--dim);">24 Elder Futhark runes &mdash; hover for meanings</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Ecosystem -->
+        <section id="ecosystem" class="section-border">
+            <div class="container">
+                <span class="section-label">Ecosystem</span>
+                <h2>Every product gets <em>a fort</em></h2>
+                <p class="lead">
+                    Every product in the [&] ecosystem maps to a fort. The layout is generated from
+                    PULSE loop manifests, [&] capability bindings, and Supabase schemas. If it declares a loop, it gets a fort.
+                </p>
+
+                <div class="eco-grid">
+                    <div class="eco-card">
+                        <span class="eco-rune">ᚲᚨᚠᛃᛞ</span>
+                        <div class="eco-name">Graphonomous</div>
+                        <div class="eco-role">Memory substrate. Nested in every fort.</div>
+                    </div>
+                    <div class="eco-card">
+                        <span class="eco-rune">ᛏ</span>
+                        <div class="eco-name">Delegatic</div>
+                        <div class="eco-role">Governance. Its walls are every fort's walls.</div>
+                    </div>
+                    <div class="eco-card">
+                        <span class="eco-rune">ᛚ</span>
+                        <div class="eco-name">TickTickClock</div>
+                        <div class="eco-role">Temporal intelligence. The district clocktower.</div>
+                    </div>
+                    <div class="eco-card">
+                        <span class="eco-rune">ᚹ</span>
+                        <div class="eco-name">AgenTroMatic</div>
+                        <div class="eco-role">Multi-agent orchestration. 7-phase deliberation.</div>
+                    </div>
+                    <div class="eco-card">
+                        <span class="eco-rune">ᚱ</span>
+                        <div class="eco-name">Deliberatic</div>
+                        <div class="eco-role">Argumentation protocol. Merkle-chained evidence.</div>
+                    </div>
+                    <div class="eco-card">
+                        <span class="eco-rune">ᛉ</span>
+                        <div class="eco-name">PRISM</div>
+                        <div class="eco-role">Diagnostic watchtower. 9 CL dimensions.</div>
+                    </div>
+                    <div class="eco-card">
+                        <span class="eco-rune">ᚠ</span>
+                        <div class="eco-name">WebHost.Systems</div>
+                        <div class="eco-role">Hosting layer. Deploy and invoke agents.</div>
+                    </div>
+                    <div class="eco-card">
+                        <span class="eco-rune">ᛜ</span>
+                        <div class="eco-name">Agentelic</div>
+                        <div class="eco-role">Engineering. Spec-driven build pipeline.</div>
+                    </div>
+                    <div class="eco-card">
+                        <span class="eco-rune">ᚷ</span>
+                        <div class="eco-name">FleetPrompt</div>
+                        <div class="eco-role">Marketplace. Trust-scored agent registry.</div>
+                    </div>
+                    <div class="eco-card">
+                        <span class="eco-rune">ᛊ</span>
+                        <div class="eco-name">BendScript</div>
+                        <div class="eco-role">Knowledge editor. Canvas-based graph UI.</div>
+                    </div>
+                    <div class="eco-card">
+                        <span class="eco-rune">ᛈ</span>
+                        <div class="eco-name">GeoFleetic</div>
+                        <div class="eco-role">Spatial intelligence. Federated fleet learning.</div>
+                    </div>
+                    <div class="eco-card">
+                        <span class="eco-rune">ᛟ</span>
+                        <div class="eco-name">SpecPrompt</div>
+                        <div class="eco-role">Standards. Git-based spec lifecycle.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Not a Dashboard -->
+        <section class="section-border">
+            <div class="container">
+                <span class="section-label">Why Not a Dashboard</span>
+                <h2>Blueprints scale.<br /><em>Dashboards don't.</em></h2>
+                <p class="lead">
+                    Blueprints were literally invented to represent massive buildings and remain navigable.
+                    Dungeon maps become mazes. Isometric views become visual noise. Dashboards run out of panels.
+                    Blueprints handle campus &rarr; room &rarr; detail with the same visual language.
+                </p>
+
+                <div class="dark-factory-split">
+                    <div class="df-card dark">
+                        <h3>Current observability</h3>
+                        <ul>
+                            <li>Flat dashboards with panels that multiply</li>
+                            <li>Trace waterfalls that require expertise to read</li>
+                            <li>Abstract DAG visualizations disconnected from runtime</li>
+                            <li>No spatial intuition for non-engineers</li>
+                            <li>Auditors, PMs, and stakeholders locked out</li>
+                        </ul>
+                    </div>
+                    <div class="df-card lit">
+                        <h3>Spatial cognition</h3>
+                        <ul>
+                            <li><span class="rune-glyph">ᚲ</span> Walk through the system, don't scan a spreadsheet</li>
+                            <li><span class="rune-glyph">ᛊ</span> Overlay system &mdash; one map, multiple lenses</li>
+                            <li><span class="rune-glyph">ᛞ</span> Same tile grid from district to single operation</li>
+                            <li><span class="rune-glyph">ᛗ</span> Immediately legible to anyone, runes reward depth</li>
+                            <li><span class="rune-glyph">ᚷ</span> B2B boundaries built into the visual model</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="pullquote">
+                    <p>
+                        The fort is alive. Rooms brighten with activity and dim with decay.
+                        Corridors pulse during deliberation. Walls thicken when policies block.
+                        Towers fire when anomalies hit. The fort breathes with your system.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tech -->
+        <section class="section-border">
+            <div class="container">
+                <span class="section-label">Stack</span>
+                <h2>Built with <em>what works</em></h2>
+
+                <div class="pillar-grid">
+                    <div class="pillar">
+                        <div class="pillar-icon" style="font-size: 1rem;">&#9638;</div>
+                        <h3>SvelteKit + CSS Grid</h3>
+                        <p>
+                            Zero-dependency rendering. SVG overlays. SSR-compatible and accessible.
+                            Pan and zoom in ~20 lines of JS. Cloudflare Pages for zero-cost hosting.
+                        </p>
+                    </div>
+                    <div class="pillar">
+                        <div class="pillar-icon" style="font-size: 1rem;">&#8693;</div>
+                        <h3>MCP Data Sources</h3>
+                        <p>
+                            Live data from Graphonomous MCP and PRISM MCP.
+                            PULSE manifests parsed at build time for fort skeletons.
+                            RuneFort never makes LLM calls &mdash; pure visualization.
+                        </p>
+                    </div>
+                    <div class="pillar">
+                        <div class="pillar-icon" style="font-size: 1rem;">&#8634;</div>
+                        <h3>Its Own Loop</h3>
+                        <p>
+                            RuneFort learns from how you navigate. Frequently visited rooms
+                            move closer. Unused rooms recede. The fort is itself
+                            a continual learning system.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section class="section-border" style="text-align: center; padding: 6rem 0;">
+            <div class="container">
+                <h2>Your autonomous workflows<br />deserve <em>a control room</em></h2>
+                <p class="lead" style="margin: 1.5rem auto 2.5rem; text-align: center;">
+                    Whether you're running a dark factory, orchestrating multi-agent workflows,
+                    or building the next cognitive architecture &mdash; if it has a loop, it gets a fort.
+                </p>
+                <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                    <a href="https://github.com/c-u-l8er/runefort" class="btn btn-primary" target="_blank" rel="noopener">View on GitHub</a>
+                    <a href="#vision" class="btn btn-ghost">Read the Spec</a>
+                </div>
+                <div class="rune-sequence" style="font-size: 1.6rem; color: var(--rune); letter-spacing: 0.4em; margin-top: 3rem; opacity: 0.4;">
+                    ᚲ ᚨ ᚱ ᚠ ᛃ ᛞ
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <div class="container">
+                <div class="footer-inner">
+                    <div class="footer-brand"><span class="rune">ᚲ</span> RuneFort</div>
+                    <ul class="footer-links">
+                        <li><a href="https://github.com/c-u-l8er/runefort" target="_blank" rel="noopener">GitHub</a></li>
+                        <li><a href="https://opensentience.org" target="_blank" rel="noopener">OpenSentience</a></li>
+                        <li><a href="https://graphonomous.com" target="_blank" rel="noopener">Graphonomous</a></li>
+                    </ul>
+                    <div class="footer-copy">
+                        &copy; 2026 [&] Protocol ecosystem &middot; Spatial cognition for autonomous workflows
+                        <div class="footer-runes">ᚲ ᚨ ᚠ ᛃ ᛞ ᛉ ᚱ ᛏ ᛊ ᛈ ᚦ ᚢ ᚷ ᚹ ᚺ ᚾ ᛁ ᛇ ᛒ ᛖ ᛗ ᛚ ᛜ ᛟ</div>
+                    </div>
+                </div>
+            </div>
+        </footer>
+        <!-- Prism.js -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+
+        <!-- rot.js -->
+        <script src="https://cdn.jsdelivr.net/npm/rot-js@2.2.0/dist/rot.min.js"></script>
+
+        <script>
+        (function() {
+            // ── Colors ──
+            var amber = '#e8a84c', rune = '#c4956a', stone = '#8a9a9e';
+            var wall = '#44423d', text = '#e4e2dc', dim = '#7a7770';
+            var alert = '#e85a5a', seal = '#5b6a8a', green = '#6ac48c';
+            var bg = '#0e0f14';
+
+            // rot.js %c{fg} sets foreground color inline
+            function c(color) { return '%c{' + color + '}'; }
+            var W = c(wall), T = c(text), A = c(amber), R = c(rune);
+            var S = c(stone), D = c(dim), AL = c(alert), SE = c(seal), G = c(green);
+
+            // ── Blueprints per zoom level (rot.js color-formatted strings) ──
+            var blueprints = [];
+
+            blueprints[0] = [
+                T+'┌─ RUNEFORT DISTRICT ──────────────────────────────────────────────────────┐',
+                W+'│                                                                          │',
+                W+'│   '+S+'[OpenSentience bedrock — protocols OS-001 through OS-010]'+W+'        │',
+                W+'│   '+S+'═══════════════════════════════════════════════════════'+W+'          │',
+                W+'│                                                                          │',
+                W+'│   '+AL+'┌─ PRISM ────┐'+W+'                                                   │',
+                W+'│   '+AL+'│ Watchtower │ '+S+'←── observes all forts'+W+'                              │',
+                W+'│   '+AL+'│ Complex    │'+W+'                                                   │',
+                W+'│   '+AL+'└────────────┘'+W+'                                                   │',
+                W+'│         '+S+'║'+W+'                                                          │',
+                W+'│   '+T+'┌─────╨──── Shared Ground (amp.*) ────────────────────────────┐'+W+'  │',
+                W+'│   '+T+'│                                                              │'+W+'  │',
+                W+'│   '+T+'│  '+A+'┌─Graphonomous─┐  ┌─Delegatic──┐  ┌─TickTickClock─┐'+T+'   │'+W+'  │',
+                W+'│   '+T+'│  '+A+'│ '+R+'ᚲᚨᚠᛃᛞ'+A+'       │  │ '+R+'ᛏ'+A+' Govern  │  │ '+R+'ᛚ'+A+' Temporal   │'+T+'   │'+W+'  │',
+                W+'│   '+T+'│  '+A+'│ Memory       │  │ (walls for │  │ (clocktower  │'+T+'   │'+W+'  │',
+                W+'│   '+T+'│  '+A+'│ Substrate    │  │  all forts)│  │  for all)    │'+T+'   │'+W+'  │',
+                W+'│   '+T+'│  '+A+'└──────────────┘  └────────────┘  └───────────────┘'+T+'   │'+W+'  │',
+                W+'│   '+T+'│                                                              │'+W+'  │',
+                W+'│   '+T+'│  '+A+'┌─WebHost──┐  ┌─Agentelic─┐  ┌─AgenTroMatic─┐'+T+'         │'+W+'  │',
+                W+'│   '+T+'│  '+A+'│'+T+' Hosting  '+A+'│'+S+'←─'+A+'│'+T+' Build     '+A+'│'+S+'──'+A+'│ '+R+'ᚹ'+T+' Orchestrate'+A+'│'+T+'         │'+W+'  │',
+                W+'│   '+T+'│  '+A+'│'+T+' Layer    '+A+'│  │'+T+' Pipeline  '+A+'│  │'+T+' 7-phase loop'+A+'│'+T+'         │'+W+'  │',
+                W+'│   '+T+'│  '+A+'└──────────┘  └───────────┘  └──────────────┘'+T+'         │'+W+'  │',
+                W+'│   '+T+'│                                                              │'+W+'  │',
+                W+'│   '+T+'└──────────────────────────────────────────────────────────────┘'+W+'  │',
+                W+'│                                                                          │',
+                T+'└──────────────────────────────────────────────────────────────────────────────┘'
+            ];
+
+            // L1 — Campus (Graphonomous fort)
+            blueprints[1] = [
+                A+'┌─ GRAPHONOMOUS FORT ─ graphonomous.memory_loop ──────────────────────┐',
+                A+'│                                                                      │',
+                A+'│  '+R+'ᛊ '+D+'PULSE cadence: event-driven │ closure: eventual'+A+'              │',
+                A+'│                                                                      │',
+                A+'│  '+G+'┌─ Retrieve ──────┐'+A+'  '+S+'┌─ Route ─────────┐'+A+'                  │',
+                A+'│  '+G+'│ '+R+'ᚲ'+T+' Kaunan         '+G+'│'+A+'  '+S+'│ '+R+'ᚨ'+T+' Ansuz           '+S+'│'+A+'                  │',
+                A+'│  '+G+'│'+T+' context, search '+G+'│'+S+'══│'+T+' SCC analysis     '+S+'│'+A+'                  │',
+                A+'│  '+G+'│'+T+' topology        '+G+'│'+A+'  '+S+'│'+T+' κ routing        '+S+'│'+A+'                  │',
+                A+'│  '+G+'│'+T+' 5000ms timeout  '+G+'│'+A+'  '+S+'│'+T+' 1000ms timeout   '+S+'│'+A+'                  │',
+                A+'│  '+G+'└─────────────────┘'+A+'  '+S+'└────────┬────────┘'+A+'                  │',
+                A+'│                              '+S+'│'+A+'                              │',
+                A+'│                    '+D+'┌─ κ=0 ──┼── κ>0 ─┐'+A+'                    │',
+                A+'│                    '+D+'│        '+S+'│'+D+'         │'+A+'                    │',
+                A+'│                    '+D+'▼        '+S+'│'+D+'         ▼'+A+'                    │',
+                A+'│  '+A+'┌─ Act ───────────┐'+A+'  '+S+'│'+A+'  '+SE+'┌─ Deliberate ────┐'+A+'  │',
+                A+'│  '+A+'│ '+R+'ᚠ'+T+' Fehu           '+A+'│'+A+'  '+S+'│'+A+'  '+SE+'│ '+R+'ᚱ'+T+' Raidho          '+SE+'│'+A+'  │',
+                A+'│  '+A+'│'+T+' store, update   '+A+'│'+A+'  '+S+'│'+A+'  '+SE+'│'+T+' weigh evidence   '+SE+'│'+A+'  │',
+                A+'│  '+A+'│'+T+' delete, merge   '+A+'│'+S+'◄─┘'+A+'  '+SE+'│'+T+' resolve cycles   '+SE+'│'+A+'  │',
+                A+'│  '+A+'│'+T+' 3000ms timeout  '+A+'│'+A+'       '+SE+'│'+T+' emit verdict     '+SE+'│'+A+'  │',
+                A+'│  '+A+'└────────┬────────┘'+A+'       '+SE+'└─────────────────┘'+A+'  │',
+                A+'│           '+S+'│'+A+'                                              │',
+                A+'│  '+R+'┌─ Learn ─────────┐'+A+'  '+D+'┌─ Consolidate ───┐'+A+'          │',
+                A+'│  '+R+'│ '+R+'ᛃ'+T+' Jera           '+R+'│'+S+'══'+D+'│ '+R+'ᛞ'+T+' Dagaz           '+D+'│'+A+'          │',
+                A+'│  '+R+'│'+T+' outcomes         '+R+'│'+A+'  '+D+'│'+T+' merge, prune     '+D+'│'+A+'          │',
+                A+'│  '+R+'│'+T+' confidence Δ     '+R+'│'+A+'  '+D+'│'+T+' promote, decay   '+D+'│'+A+'          │',
+                A+'│  '+R+'│'+T+' 2000ms timeout   '+R+'│'+A+'  '+D+'│'+T+' 30000ms timeout  '+D+'│'+A+'          │',
+                A+'│  '+R+'└─────────────────┘'+A+'  '+D+'└─────────────────┘'+A+'          │',
+                A+'│                                                                      │',
+                A+'└──────────────────────────────────────────────────────────────────────┘'
+            ];
+
+            // L2 — Wing (Retrieve wing detail)
+            blueprints[2] = [
+                G+'┌─ RETRIEVE WING ─ ᚲ Kaunan ─────────────────────────────────────────┐',
+                G+'│                                                                      │',
+                G+'│  '+A+'┌─ semantic_memory ──────────────────────────────────────────┐'+G+'  │',
+                G+'│  '+A+'│  '+T+'42 tiles  '+D+'│  types: semantic, procedural  │  conf: '+G+'0.82  '+A+'│'+G+'  │',
+                G+'│  '+A+'│  '+T+'activity: '+G+'████████████████████░░ 0.91'+T+'  state: '+G+'active     '+A+'│'+G+'  │',
+                G+'│  '+A+'│  '+D+'edges → causal_reasoning, goal_tracking                   '+A+'│'+G+'  │',
+                G+'│  '+A+'└────────────────────────────────────────────────────────────┘'+G+'  │',
+                G+'│       '+S+'║ '+D+'weight: 0.88'+G+'                                              │',
+                G+'│  '+SE+'┌─ causal_reasoning ─────────────────────────────────────────┐'+G+'  │',
+                G+'│  '+SE+'│  '+T+'18 tiles  '+D+'│  types: causal, outcome       │  conf: '+A+'0.67  '+SE+'│'+G+'  │',
+                G+'│  '+SE+'│  '+T+'activity: '+A+'██████████████████░░░░ 0.74'+T+'  state: '+R+'pulsing    '+SE+'│'+G+'  │',
+                G+'│  '+SE+'│  '+D+'edges → semantic_memory, deliberation_corridor             '+SE+'│'+G+'  │',
+                G+'│  '+SE+'└────────────────────────────────────────────────────────────┘'+G+'  │',
+                G+'│       '+S+'║ '+D+'weight: 0.41'+G+'                                              │',
+                G+'│  '+W+'┌─ episodic_buffer ──────────────────────────────────────────┐'+G+'  │',
+                G+'│  '+W+'│  '+T+'31 tiles  '+D+'│  types: episodic, temporal    │  conf: '+W+'0.55  │'+G+'  │',
+                G+'│  '+W+'│  '+T+'activity: '+W+'██████░░░░░░░░░░░░░░░░ 0.23'+T+'  state: '+D+'idle       '+W+'│'+G+'  │',
+                G+'│  '+W+'│  '+D+'edges → semantic_memory                                    '+W+'│'+G+'  │',
+                G+'│  '+W+'└────────────────────────────────────────────────────────────┘'+G+'  │',
+                G+'│                                                                      │',
+                G+'│  '+R+'┌─ goal_tracking ────────────────────────────────────────────┐'+G+'  │',
+                G+'│  '+R+'│  '+T+' 8 tiles  '+D+'│  types: goal                  │  conf: '+G+'0.78  '+R+'│'+G+'  │',
+                G+'│  '+R+'│  '+T+'activity: '+A+'█████████████████░░░░░ 0.65'+T+'  state: '+G+'active     '+R+'│'+G+'  │',
+                G+'│  '+R+'│  '+D+'edges → semantic_memory, causal_reasoning                  '+R+'│'+G+'  │',
+                G+'│  '+R+'└────────────────────────────────────────────────────────────┘'+G+'  │',
+                G+'│                                                                      │',
+                G+'│  '+D+'⚙ Gate: '+S+'kappa_gate  '+T+'filter: κ > 0 → deliberation  state: '+G+'open'+G+'    │',
+                G+'│                                                                      │',
+                G+'└──────────────────────────────────────────────────────────────────────┘'
+            ];
+
+            // L3 — Room (semantic_memory detail)
+            blueprints[3] = [
+                A+'┌─ ROOM: semantic_memory ─ Retrieve Wing ─────────────────────────────┐',
+                A+'│                                                                       │',
+                A+'│  '+T+'node_a7f3c '+D+'(semantic)  conf: '+G+'0.94'+T+'  timescale: '+SE+'slow'+A+'         │',
+                A+'│  '+D+'│ '+T+'"RuneFort renders PULSE loops as navigable forts"'+A+'            │',
+                A+'│  '+D+'│ access: 47  decay: 0.002  tags: runefort, viz, pulse'+A+'        │',
+                A+'│  '+D+'│'+A+'                                                              │',
+                A+'│  '+D+'├──'+S+' supports (0.76) '+D+'──▶'+A+'                                        │',
+                A+'│  '+D+'│'+A+'                                                              │',
+                A+'│  '+T+'node_b2e81 '+D+'(semantic)  conf: '+A+'0.71'+T+'  timescale: '+R+'medium'+A+'       │',
+                A+'│  '+D+'│ '+T+'"Dark factories need spatial observability for governance"'+A+'   │',
+                A+'│  '+D+'│ access: 12  decay: 0.010  tags: dark-factory, gov'+A+'            │',
+                A+'│  '+D+'│'+A+'                                                              │',
+                A+'│  '+D+'├──'+S+' related (0.52) '+D+'──▶'+A+'                                         │',
+                A+'│  '+D+'│'+A+'                                                              │',
+                A+'│  '+T+'node_c9d44 '+D+'(procedural)  conf: '+G+'0.88'+T+'  timescale: '+SE+'slow'+A+'      │',
+                A+'│  '+D+'│ '+T+'"Parse PULSE manifest → generate skeleton → populate rooms"'+A+' │',
+                A+'│  '+D+'│ access: 33  decay: 0.003  tags: pipeline, fort-gen'+A+'           │',
+                A+'│  '+D+'│'+A+'                                                              │',
+                A+'│  '+D+'└──'+S+' derived_from (0.91) '+D+'──▶ '+T+'node_a7f3c'+A+'                       │',
+                A+'│                                                                       │',
+                A+'│  '+D+'─────────────────────────────────────────────────────────────'+A+'  │',
+                A+'│  '+D+'metrics:'+T+'  nodes: 42  avg_conf: '+G+'0.82'+T+'  SCCs: 2  κ: '+G+'0'+A+'            │',
+                A+'│                                                                       │',
+                A+'└──────────────────────────────────────────────────────────────────────┘'
+            ];
+
+            // L4 — Rune (single operation)
+            blueprints[4] = [
+                R+'┌─ RUNE: ᚲ Kaunan ─ torch / knowledge ────────────────────────────────┐',
+                R+'│                                                                       │',
+                R+'│  '+T+'Operation: '+G+'retrieve_context'+R+'                                       │',
+                R+'│  '+T+'Machine:   '+S+'retrieve'+R+'                                               │',
+                R+'│  '+T+'Phase:     '+S+'retrieve_context '+D+'(kind: retrieve)'+R+'                      │',
+                R+'│                                                                       │',
+                R+'│  '+D+'── invocation ──────────────────────────────────────────────'+R+'  │',
+                R+'│  '+D+'tool:     '+G+'graphonomous.retrieve'+R+'                                   │',
+                R+'│  '+D+'action:   '+S+'context'+R+'                                                 │',
+                R+'│  '+D+'query:    '+A+'"dark factory spatial observability governance"'+R+'          │',
+                R+'│  '+D+'max:      '+T+'50 nodes  min_conf: 0.3  topology: '+G+'true'+R+'              │',
+                R+'│                                                                       │',
+                R+'│  '+D+'── execution ───────────────────────────────────────────────'+R+'  │',
+                R+'│  '+D+'duration: '+G+'142ms   '+T+'nodes: 12   edges: 28'+R+'                       │',
+                R+'│                                                                       │',
+                R+'│  '+D+'── topology ────────────────────────────────────────────────'+R+'  │',
+                R+'│  '+D+'scc_0:    '+G+'[node_a7f3c, node_b2e81]          '+T+'κ = '+G+'0'+R+'              │',
+                R+'│  '+D+'scc_1:    '+AL+'[node_d1f22, node_e3a99, node_f7b11]  '+T+'κ = '+AL+'1'+R+'     │',
+                R+'│  '+D+'routing:  '+AL+'DELIBERATE  '+D+'(κ=1 in scc_1 — cyclic belief)'+R+'       │',
+                R+'│                                                                       │',
+                R+'│  '+D+'── causal provenance ───────────────────────────────────────'+R+'  │',
+                R+'│  '+D+'trigger:  '+T+'user_query'+R+'                                              │',
+                R+'│  '+D+'trace:    '+D+'tr_2026-04-14_091200_a7f3c'+R+'                             │',
+                R+'│  '+D+'child:    '+S+'route_topology'+R+'                                          │',
+                R+'│                                                                       │',
+                R+'│  '+D+'── rune sequence ───────────────────────────────────────────'+R+'  │',
+                R+'│  '+R+'  ᚲ  →  ᚨ  →  ᚱ  →  ᚠ'+R+'                                        │',
+                R+'│  '+D+'  retrieve → route → deliberate → act'+R+'                           │',
+                R+'│                                                                       │',
+                R+'└──────────────────────────────────────────────────────────────────────┘'
+            ];
+
+            var zoomTitles = [
+                'L0 — District View',
+                'L1 — Campus View',
+                'L2 — Wing View',
+                'L3 — Room View',
+                'L4 — Rune View'
+            ];
+            var dataTitles = [
+                'District Manifest',
+                'PULSE Loop Manifest',
+                'Wing Topology',
+                'Room Node Graph',
+                'Operation Trace'
+            ];
+
+            var display = null;
+            var COLS = 78;
+
+            function initDisplay() {
+                var container = document.getElementById('rot-container');
+                if (!container || typeof ROT === 'undefined') return;
+
+                display = new ROT.Display({
+                    width: COLS,
+                    height: 30,
+                    fontSize: 14,
+                    fontFamily: '"JetBrains Mono", monospace',
+                    bg: bg,
+                    fg: text,
+                    spacing: 1.05,
+                    forceSquareRatio: false
+                });
+                container.appendChild(display.getContainer());
+                drawBlueprint(0);
+            }
+
+            function drawBlueprint(level) {
+                if (!display) return;
+                display.clear();
+                var lines = blueprints[level];
+                for (var y = 0; y < lines.length; y++) {
+                    display.drawText(0, y, lines[y], COLS);
+                }
+            }
+
+            function selectZoom(level) {
+                // Update cards
+                var cards = document.querySelectorAll('.zoom-card');
+                cards.forEach(function(c) { c.classList.remove('active'); });
+                cards[level].classList.add('active');
+
+                // Update rot.js blueprint
+                drawBlueprint(level);
+
+                // Update Prism code panels
+                var codes = document.querySelectorAll('.zoom-code');
+                codes.forEach(function(c) { c.classList.remove('active'); });
+                document.getElementById('zoom-code-' + level).classList.add('active');
+
+                // Update headers
+                document.getElementById('zoom-viewer-title').textContent = zoomTitles[level];
+                document.getElementById('zoom-data-title').textContent = dataTitles[level];
+            }
+            // Make selectZoom available globally
+            window.selectZoom = selectZoom;
+
+            // Init
+            if (typeof Prism !== 'undefined') Prism.highlightAll();
+            if (document.readyState === 'complete') {
+                initDisplay();
+            } else {
+                window.addEventListener('load', initDisplay);
+            }
+        })();
+        </script>
+    </body>
+</html>
