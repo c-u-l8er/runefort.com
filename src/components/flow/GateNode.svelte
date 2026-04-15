@@ -1,14 +1,16 @@
 <script>
   import { Handle, Position } from "@xyflow/svelte";
   import { isOverlayActive } from "$lib/stores/overlays.svelte.js";
-  import { topologyStyle, temporalStyle } from "$lib/overlayEffects.js";
+  import { topologyStyle, temporalStyle, assemblyDeployColor } from "$lib/overlayEffects.js";
   let { data } = $props();
 
   let topo = $derived(isOverlayActive("topology") ? topologyStyle(data, "gate") : null);
   let temporal = $derived(isOverlayActive("temporal") ? temporalStyle(data.kind, data.timeout ?? 5000) : null);
+  let assemblyActive = $derived(isOverlayActive("assembly"));
+  let deployColor = $derived(assemblyActive && data.deployStage ? assemblyDeployColor(data.deployStage) : null);
 
-  let overlayBorder = $derived(topo?.border ?? "rgba(232, 168, 76, 0.25)");
-  let overlayGlow = $derived(topo?.glow ?? "none");
+  let overlayBorder = $derived(deployColor ?? topo?.border ?? "rgba(232, 168, 76, 0.25)");
+  let overlayGlow = $derived(deployColor ? `0 0 8px ${deployColor}40` : topo?.glow ?? "none");
 </script>
 
 <div class="gate-node" style="border-color: {overlayBorder}; box-shadow: {overlayGlow};">
@@ -16,6 +18,9 @@
   <div class="gate-detail">{data.detail}</div>
   {#if topo?.isKappaNode}
     <div class="kappa-indicator">cyclic</div>
+  {/if}
+  {#if assemblyActive && data.deployStage}
+    <div class="deploy-stage" style="color: {deployColor};">{data.deployStage}</div>
   {/if}
 </div>
 <Handle type="target" position={Position.Top} id="top" />
@@ -54,5 +59,13 @@
     color: #e85a5a;
     text-transform: uppercase;
     letter-spacing: 0.08em;
+  }
+  .deploy-stage {
+    margin-top: 0.2rem;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.45rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
 </style>

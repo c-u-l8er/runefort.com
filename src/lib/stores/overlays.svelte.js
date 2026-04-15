@@ -10,6 +10,7 @@ const overlayDefs = [
   { key: "rune",       label: "Rune",       shortcut: "R", active: false },
   { key: "confidence", label: "Confidence", shortcut: "C", active: false },
   { key: "topology",   label: "Topology",   shortcut: "K", active: false },
+  { key: "assembly",   label: "Assembly",   shortcut: "A", active: false },
 ];
 
 let overlays = $state(overlayDefs.map((o) => ({ ...o })));

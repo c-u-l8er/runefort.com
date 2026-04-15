@@ -517,6 +517,137 @@ function generateRune(manifest, nodeId) {
   return { nodes, edges };
 }
 
+// ── Build Corridor Generator (L2 assembly view) ──
+
+/**
+ * Generate build corridor nodes for a fort's build history.
+ * @param {import('$lib/stores/assembly.svelte.js').Build[]} builds
+ * @param {string} fortId
+ * @returns {{ nodes: object[], edges: object[] }}
+ */
+export function generateBuildCorridor(builds, fortId) {
+  const nodes = [];
+  const edges = [];
+  const xSpacing = 150;
+  const yStart = 30;
+
+  // Title gate
+  nodes.push({
+    id: `corridor-gate-${fortId}`,
+    type: "gate",
+    position: { x: 200, y: yStart - 60 },
+    data: { label: "Build Corridor", detail: `${builds.length} builds` },
+  });
+
+  builds.forEach((build, i) => {
+    const col = i % 4;
+    const row = Math.floor(i / 4);
+    const id = `build-${fortId}-${i}`;
+    const passCount = build.testResults.filter((t) => t.passed).length;
+
+    nodes.push({
+      id,
+      type: "buildtile",
+      position: { x: col * xSpacing + 40, y: row * 120 + yStart + 40 },
+      data: {
+        version: build.version,
+        status: build.status,
+        duration: build.duration,
+        timestamp: build.timestamp,
+        testCount: build.testResults.length,
+        testPass: passCount,
+        buildId: build.id,
+      },
+    });
+
+    // Connect to previous
+    if (i > 0) {
+      edges.push(e({
+        id: `e-corridor-${i}`,
+        source: `build-${fortId}-${i - 1}`,
+        target: id,
+        sourceHandle: col === 0 ? "bottom" : "right",
+        targetHandle: col === 0 ? "top" : "left",
+      }));
+    }
+  });
+
+  // Connect gate to first build
+  if (builds.length > 0) {
+    edges.push(e({
+      id: `e-corridor-gate`,
+      source: `corridor-gate-${fortId}`,
+      target: `build-${fortId}-0`,
+    }));
+  }
+
+  return { nodes, edges };
+}
+
+// ── Test Room Generator (L3 from build tile) ──
+
+/**
+ * Generate test result tiles for a specific build.
+ * @param {import('$lib/stores/assembly.svelte.js').Build} build
+ * @returns {{ nodes: object[], edges: object[] }}
+ */
+export function generateTestRoom(build) {
+  const nodes = [];
+  const edges = [];
+
+  // Header gate
+  nodes.push({
+    id: "test-room-gate",
+    type: "gate",
+    position: { x: 180, y: 0 },
+    data: {
+      label: `Build ${build.version}`,
+      detail: `${build.status} · ${build.testResults.length} tests`,
+    },
+  });
+
+  build.testResults.forEach((test, i) => {
+    const col = i % 3;
+    const row = Math.floor(i / 3);
+    const id = `test-${build.id}-${i}`;
+
+    nodes.push({
+      id,
+      type: "testtile",
+      position: { x: col * 200 + 30, y: row * 140 + 80 },
+      data: {
+        name: test.name,
+        passed: test.passed,
+        given: test.given,
+        expected: test.expected,
+        actual: test.actual,
+        assertions: test.assertions,
+      },
+    });
+
+    // Connect to gate
+    if (i === 0) {
+      edges.push(e({
+        id: "e-test-gate",
+        source: "test-room-gate",
+        target: id,
+      }));
+    }
+    // Connect sequentially
+    if (i > 0) {
+      edges.push(e({
+        id: `e-test-${i}`,
+        source: `test-${build.id}-${i - 1}`,
+        target: id,
+        sourceHandle: col === 0 ? "bottom" : "right",
+        targetHandle: col === 0 ? "top" : "left",
+      }));
+    }
+  });
+
+  return { nodes, edges };
+}
+
 /**
  * Main generator entry point
  * @param {'district' | 'campus' | 'wing' | 'room' | 'rune'} level

@@ -14,6 +14,8 @@
   import WallNode from "../../components/flow/WallNode.svelte";
   import BridgeNode from "../../components/flow/BridgeNode.svelte";
   import DistrictNode from "../../components/flow/DistrictNode.svelte";
+  import BuildTileNode from "../../components/flow/BuildTileNode.svelte";
+  import TestTileNode from "../../components/flow/TestTileNode.svelte";
   import AnimatedEdge from "../../components/flow/AnimatedEdge.svelte";
 
   // App components
@@ -26,21 +28,26 @@
   import McpPanel from "../../components/app/McpPanel.svelte";
   import ChatPanel from "../../components/app/ChatPanel.svelte";
   import RepoImportModal from "../../components/app/RepoImportModal.svelte";
+  import BuildTriggerDialog from "../../components/app/BuildTriggerDialog.svelte";
   import WorkspaceSwitcher from "../../components/app/WorkspaceSwitcher.svelte";
 
   // Stores
-  import { getFort, loadDemoDistrict, zoomIntoFort, zoomIntoRoom, zoomIntoNode, zoomIntoRune, zoomOut, loadSavedFort } from "$lib/stores/fort.svelte.js";
+  import { getFort, loadDemoDistrict, zoomIntoFort, zoomIntoRoom, zoomIntoNode, zoomIntoRune, zoomIntoBuildCorridor, zoomIntoBuild, zoomOut, loadSavedFort } from "$lib/stores/fort.svelte.js";
+  import { fetchPipelineStatus, getPipelineData } from "$lib/stores/assembly.svelte.js";
   import { toggleByShortcut, getOverlays, isOverlayActive } from "$lib/stores/overlays.svelte.js";
   import { getAuth, initAuth, openAuthModal, signOut } from "$lib/stores/auth.svelte.js";
   import { listForts, loadFort, deleteFort } from "$lib/persistence.js";
   import { initApiKey, setApiKey, hasApiKey } from "$lib/stores/apikey.svelte.js";
   import { autoConnect, connectedCount } from "$lib/stores/mcp.svelte.js";
   import { initWorkspaces, getWorkspaceState } from "$lib/stores/workspace.svelte.js";
+  import { syncPollingToOverlays, stopAllPolling as stopTelemetry } from "$lib/stores/telemetry.svelte.js";
+  import { loadSessionContext } from "$lib/play/session-learning.js";
 
   const nodeTypes = {
     fort: FortNode, room: RoomNode, tile: TileNode, rune: RuneNode,
     gate: GateNode, hall: HallNode, tower: TowerNode, wall: WallNode,
     bridge: BridgeNode, district: DistrictNode,
+    buildtile: BuildTileNode, testtile: TestTileNode,
   };
 
   const edgeTypes = {
@@ -67,17 +74,26 @@
     loadDemoDistrict();
     initAuth();
     initApiKey();
-    autoConnect();
+    autoConnect().then(() => {
+      // Load cross-session context after MCP connections are ready
+      loadSessionContext("ecosystem");
+    });
     // Init workspaces after auth is ready (if authenticated)
     initWorkspaces();
+
+    return () => {
+      stopTelemetry();
+    };
   });
 
   function handleKeydown(e) {
     if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
     const key = e.key.toUpperCase();
-    if (["F", "T", "P", "D", "R", "C", "K"].includes(key)) {
+    if (["F", "T", "P", "D", "R", "C", "K", "A"].includes(key)) {
       e.preventDefault();
       toggleByShortcut(key);
+      // Sync telemetry polling to overlay state after toggle
+      syncPollingToOverlays();
     }
     if (e.key === "Escape") {
       e.preventDefault();
@@ -85,12 +101,29 @@
     }
   }
 
+  let showBuildTrigger = $state(false);
+  let buildTargetFort = $state("");
+
   /** @param {{ node: any, event: any }} params */
   function handleNodeClick({ node }) {
     if (fort.zoomLevel === 0 && node.type === "fort") {
+      // Pre-fetch pipeline data when entering a fort
+      fetchPipelineStatus(node.id);
       zoomIntoFort(node.id);
+    } else if (fort.zoomLevel === 1 && node.type === "gate" && isOverlayActive("assembly")) {
+      // Assembly overlay + gate click = trigger build dialog
+      buildTargetFort = fort.activeFortId;
+      showBuildTrigger = true;
     } else if (fort.zoomLevel === 1 && node.type === "room") {
-      zoomIntoRoom(node.id);
+      if (isOverlayActive("assembly")) {
+        // Assembly overlay: zoom into build corridor
+        zoomIntoBuildCorridor(fort.activeFortId);
+      } else {
+        zoomIntoRoom(node.id);
+      }
+    } else if (fort.zoomLevel === 2 && node.type === "buildtile") {
+      // Click build tile → zoom into test room
+      zoomIntoBuild(node.data.buildId, fort.activeFortId);
     } else if (fort.zoomLevel === 2 && node.type === "room") {
       zoomIntoNode(node.id);
     } else if (fort.zoomLevel === 3 && node.type === "tile") {
@@ -126,6 +159,7 @@
 
   /** Get overlay-specific edge style */
   function getEdgeStyle() {
+    if (isOverlayActive("assembly")) return { stroke: "#4a9ade", strokeWidth: 2 };
     if (isOverlayActive("flow")) return { stroke: "#e8a84c", strokeWidth: 2 };
     if (isOverlayActive("thermal")) return { stroke: "#e85a5a", strokeWidth: 1.5 };
     if (isOverlayActive("topology")) return { stroke: "#c4956a", strokeWidth: 2 };
@@ -295,6 +329,11 @@
 <RepoImportModal
   open={showRepoImport}
   onclose={() => { showRepoImport = false; }}
+/>
+<BuildTriggerDialog
+  open={showBuildTrigger}
+  fortId={buildTargetFort}
+  onclose={() => { showBuildTrigger = false; }}
 />
 
 <style>

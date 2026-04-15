@@ -3,7 +3,7 @@
  * Each overlay interprets node.data fields to produce colors, glows, and badges.
  */
 
-/** @typedef {'thermal'|'temporal'|'diagnostic'|'rune'|'confidence'|'topology'} EffectOverlay */
+/** @typedef {'thermal'|'temporal'|'diagnostic'|'rune'|'confidence'|'topology'|'assembly'} EffectOverlay */
 
 /**
  * Thermal overlay: maps activity (0–1) to a cold→hot color ramp.
@@ -135,4 +135,77 @@ export function runeStyle(data = {}) {
   const glyphScale = 0.8 + weight * 0.6; // 0.8x to 1.4x
   const border = weight > 0.7 ? "#c4956a" : weight > 0.4 ? "#7a7770" : "#44423d";
   return { weight, glyphScale, border };
+}
+
+/**
+ * Assembly overlay: dark factory pipeline status visualization.
+ * @param {object} data - node data with pipeline fields
+ * @returns {{ bg: string, border: string, glow: string, buildStatus: string, trustScore: number, deployStage: string, specVersion: string }}
+ */
+export function assemblyStyle(data = {}) {
+  const buildStatus = data.buildStatus ?? "unknown";
+  const trustScore = Math.max(0, Math.min(100, data.trustScore ?? 0));
+  const deployStage = data.deployStage ?? "none";
+  const specVersion = data.specVersion ?? "–";
+
+  // Build status colors
+  const statusColors = {
+    parsing:    { bg: "rgba(74, 154, 222, 0.08)", border: "#4a9ade", glow: "0 0 8px rgba(74, 154, 222, 0.3)" },
+    generating: { bg: "rgba(232, 168, 76, 0.08)", border: "#e8a84c", glow: "0 0 8px rgba(232, 168, 76, 0.3)" },
+    compiling:  { bg: "rgba(232, 136, 76, 0.08)", border: "#e8884c", glow: "0 0 8px rgba(232, 136, 76, 0.3)" },
+    succeeded:  { bg: "rgba(106, 196, 140, 0.08)", border: "#6ac48c", glow: "0 0 8px rgba(106, 196, 140, 0.3)" },
+    failed:     { bg: "rgba(232, 90, 90, 0.08)", border: "#e85a5a", glow: "0 0 10px rgba(232, 90, 90, 0.4)" },
+    unknown:    { bg: "rgba(91, 106, 138, 0.05)", border: "#5b6a8a", glow: "none" },
+  };
+  const { bg, border, glow } = statusColors[buildStatus] || statusColors.unknown;
+
+  return { bg, border, glow, buildStatus, trustScore, deployStage, specVersion };
+}
+
+/**
+ * Assembly overlay: deploy stage border color.
+ * @param {string} stage
+ * @returns {string}
+ */
+export function assemblyDeployColor(stage = "none") {
+  if (stage === "production") return "#6ac48c";
+  if (stage === "canary") return "#e8a84c";
+  if (stage === "staging") return "#c4956a";
+  return "#5b6a8a";
+}
+
+/**
+ * Assembly overlay: trust score glow intensity.
+ * @param {number} trustScore - 0 to 100
+ * @returns {string}
+ */
+export function assemblyTrustGlow(trustScore = 0) {
+  const t = Math.max(0, Math.min(100, trustScore));
+  const intensity = (t / 100 * 0.5).toFixed(2);
+  if (t > 80) return `0 0 14px rgba(106, 196, 140, ${intensity})`;
+  if (t > 50) return `0 0 10px rgba(232, 168, 76, ${intensity})`;
+  if (t > 20) return `0 0 6px rgba(196, 149, 106, ${intensity})`;
+  return "none";
+}
+
+/**
+ * Assembly overlay: build tile color by status.
+ * @param {string} status - succeeded|failed|pending|running
+ * @returns {{ bg: string, border: string }}
+ */
+export function buildTileStyle(status = "pending") {
+  if (status === "succeeded") return { bg: "rgba(106, 196, 140, 0.12)", border: "#6ac48c" };
+  if (status === "failed") return { bg: "rgba(232, 90, 90, 0.12)", border: "#e85a5a" };
+  if (status === "running") return { bg: "rgba(74, 154, 222, 0.1)", border: "#4a9ade" };
+  return { bg: "rgba(91, 106, 138, 0.06)", border: "#5b6a8a" };
+}
+
+/**
+ * Assembly overlay: test tile color by pass/fail.
+ * @param {boolean} passed
+ * @returns {{ bg: string, border: string }}
+ */
+export function testTileStyle(passed = true) {
+  if (passed) return { bg: "rgba(106, 196, 140, 0.12)", border: "#6ac48c" };
+  return { bg: "rgba(232, 90, 90, 0.12)", border: "#e85a5a" };
 }

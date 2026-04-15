@@ -11,7 +11,7 @@
  * @property {string} [rune] - Elder Futhark glyph
  * @property {number} [elevation] - 0 = ground
  *
- * @typedef {'structure' | 'flow' | 'thermal' | 'temporal' | 'diagnostic' | 'rune' | 'confidence' | 'topology'} OverlayKey
+ * @typedef {'structure' | 'flow' | 'thermal' | 'temporal' | 'diagnostic' | 'rune' | 'confidence' | 'topology' | 'assembly'} OverlayKey
  *
  * @typedef {Object} Overlay
  * @property {OverlayKey} key

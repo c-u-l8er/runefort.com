@@ -24,4 +24,14 @@ export const DEFAULT_MCP_SERVERS = [
     name: "os-pulse",
     label: "PULSE Manifests",
   },
+  {
+    url: "https://app.agentelic.com/mcp",
+    name: "agentelic",
+    label: "Agentelic Pipeline",
+  },
+  {
+    url: "https://app.fleetprompt.com/mcp",
+    name: "fleetprompt",
+    label: "FleetPrompt Registry",
+  },
 ];

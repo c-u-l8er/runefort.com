@@ -1,7 +1,7 @@
 <script>
   import { Handle, Position } from "@xyflow/svelte";
   import { isOverlayActive } from "$lib/stores/overlays.svelte.js";
-  import { thermalStyle, confidenceStyle, temporalStyle, diagnosticStyle, topologyStyle } from "$lib/overlayEffects.js";
+  import { thermalStyle, confidenceStyle, temporalStyle, diagnosticStyle, topologyStyle, assemblyStyle } from "$lib/overlayEffects.js";
   let { data } = $props();
 
   const stateColors = { active: "#6ac48c", pulsing: "#e8a84c", idle: "#44423d" };
@@ -13,10 +13,11 @@
   let temporal = $derived(isOverlayActive("temporal") ? temporalStyle(data.kind, data.timeout) : null);
   let diag = $derived(isOverlayActive("diagnostic") ? diagnosticStyle(data) : null);
   let topo = $derived(isOverlayActive("topology") ? topologyStyle(data, "room") : null);
+  let assembly = $derived(isOverlayActive("assembly") && data.buildStatus ? assemblyStyle(data) : null);
 
-  let overlayBg = $derived(thermal?.bg ?? conf?.bg ?? "transparent");
-  let overlayBorder = $derived(topo?.border ?? temporal?.border ?? conf?.border ?? thermal?.border ?? baseBorder);
-  let overlayGlow = $derived(thermal?.glow ?? conf?.glow ?? topo?.glow ?? "none");
+  let overlayBg = $derived(assembly?.bg ?? thermal?.bg ?? conf?.bg ?? "transparent");
+  let overlayBorder = $derived(assembly?.border ?? topo?.border ?? temporal?.border ?? conf?.border ?? thermal?.border ?? baseBorder);
+  let overlayGlow = $derived(assembly?.glow ?? thermal?.glow ?? conf?.glow ?? topo?.glow ?? "none");
 </script>
 
 <div class="room-node" style="border-color: {overlayBorder}60; background: {overlayBg === 'transparent' ? '#0e0f14' : overlayBg}; box-shadow: {overlayGlow};">
@@ -62,6 +63,15 @@
     <div class="diag-badge" style="color: {diag.color}; border-color: {diag.color}40;">
       <span class="diag-grade">{diag.grade}</span>
       <span class="diag-score">{diag.score}</span>
+    </div>
+  {/if}
+
+  {#if assembly}
+    <div class="assembly-badge" style="color: {assembly.border}; border-color: {assembly.border}40;">
+      <span class="assembly-label">{assembly.buildStatus}</span>
+      {#if data.buildCount}
+        <span class="assembly-count">{data.buildCount}</span>
+      {/if}
     </div>
   {/if}
 </div>
@@ -201,5 +211,27 @@
   .diag-score {
     font-size: 0.5rem;
     opacity: 0.8;
+  }
+
+  /* Assembly badge */
+  .assembly-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+    padding: 0.12rem 0.4rem;
+    border: 1px solid;
+    border-radius: 4px;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .assembly-label {
+    font-size: 0.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .assembly-count {
+    font-size: 0.45rem;
+    opacity: 0.7;
   }
 </style>

@@ -1,4 +1,6 @@
-import { generateFortFromManifest, DEMO_MANIFESTS } from "$lib/fortGenerator.js";
+import { generateFortFromManifest, generateBuildCorridor, generateTestRoom, DEMO_MANIFESTS } from "$lib/fortGenerator.js";
+import { getPipelineData } from "$lib/stores/assembly.svelte.js";
+import { trackNavigation } from "$lib/play/session-learning.js";
 
 /**
  * Registry of imported forts (repo imports, etc.) that persist across zoom levels.
@@ -13,6 +15,7 @@ const _importedForts = new Map();
  * @property {string} activeFortId - which fort we're zoomed into
  * @property {string | null} activeRoomId - which room we're viewing (L2+)
  * @property {string | null} activeNodeId - which node we're inspecting (L3+)
+ * @property {string | null} activeBuildId - which build tile we're viewing tests for (L3 assembly)
  * @property {import('@xyflow/svelte').Node[]} nodes
  * @property {import('@xyflow/svelte').Edge[]} edges
  * @property {object | null} manifest - current PULSE manifest
@@ -27,6 +30,7 @@ let fort = $state({
   activeFortId: "",
   activeRoomId: null,
   activeNodeId: null,
+  activeBuildId: null,
   nodes: [],
   edges: [],
   manifest: null,
@@ -106,6 +110,7 @@ export function zoomIntoFort(fortId) {
   fort.edges = campus.edges;
   fort.manifest = manifest;
   fort.dirty = true;
+  trackNavigation(fortId, 1);
 }
 
 /** Zoom into a room (L2 wing view) */
@@ -117,6 +122,7 @@ export function zoomIntoRoom(roomId) {
   fort.nodes = wing.nodes;
   fort.edges = wing.edges;
   fort.dirty = true;
+  trackNavigation(fort.activeFortId, 2, roomId);
 }
 
 /** Zoom into a node (L3 room detail) */
@@ -127,6 +133,7 @@ export function zoomIntoNode(roomId) {
   fort.nodes = room.nodes;
   fort.edges = room.edges;
   fort.dirty = true;
+  trackNavigation(fort.activeFortId, 3, roomId);
 }
 
 /** Zoom into rune detail (L4) */
@@ -138,6 +145,35 @@ export function zoomIntoRune(nodeId) {
   fort.dirty = true;
 }
 
+/** Zoom into build corridor for a fort (L2 assembly view) */
+export function zoomIntoBuildCorridor(fortId) {
+  const pipeline = getPipelineData(fortId);
+  if (!pipeline || !pipeline.builds.length) return;
+  const corridor = generateBuildCorridor(pipeline.builds, fortId);
+  fort.zoomLevel = 2;
+  fort.activeRoomId = `corridor-${fortId}`;
+  fort.activeNodeId = null;
+  fort.activeBuildId = null;
+  fort.nodes = corridor.nodes;
+  fort.edges = corridor.edges;
+  fort.dirty = true;
+}
+
+/** Zoom into a build's test room (L3 assembly view) */
+export function zoomIntoBuild(buildId, fortId) {
+  const pipeline = getPipelineData(fortId || fort.activeFortId);
+  if (!pipeline) return;
+  const build = pipeline.builds.find((b) => b.id === buildId);
+  if (!build) return;
+  const room = generateTestRoom(build);
+  fort.zoomLevel = 3;
+  fort.activeNodeId = buildId;
+  fort.activeBuildId = buildId;
+  fort.nodes = room.nodes;
+  fort.edges = room.edges;
+  fort.dirty = true;
+}
+
 /** Go back one zoom level */
 export function zoomOut() {
   if (fort.zoomLevel === 0) return;
@@ -146,7 +182,12 @@ export function zoomOut() {
   } else if (fort.zoomLevel === 2) {
     zoomIntoFort(fort.activeFortId);
   } else if (fort.zoomLevel === 3) {
-    zoomIntoRoom(fort.activeRoomId);
+    if (fort.activeBuildId) {
+      // Return from test room to build corridor
+      zoomIntoBuildCorridor(fort.activeFortId);
+    } else {
+      zoomIntoRoom(fort.activeRoomId);
+    }
   } else if (fort.zoomLevel === 4) {
     zoomIntoNode(fort.activeRoomId);
   }
