@@ -1,10 +1,20 @@
 <script>
   import { Handle, Position } from "@xyflow/svelte";
+  import { isOverlayActive } from "$lib/stores/overlays.svelte.js";
+  import { topologyStyle, runeStyle, diagnosticStyle } from "$lib/overlayEffects.js";
   let { data } = $props();
+
+  let topo = $derived(isOverlayActive("topology") ? topologyStyle(data, "rune") : null);
+  let rune = $derived(isOverlayActive("rune") ? runeStyle(data) : null);
+  let diag = $derived(isOverlayActive("diagnostic") ? diagnosticStyle(data) : null);
+
+  let overlayGlow = $derived(topo?.glow ?? "none");
+  let overlayBorder = $derived(topo?.border ?? "rgba(196, 149, 106, 0.3)");
+  let glyphScale = $derived(rune?.glyphScale ?? 1);
 </script>
 
-<div class="rune-node">
-  <div class="rune-glyph">{data.rune}</div>
+<div class="rune-node" style="border-color: {overlayBorder}; box-shadow: {overlayGlow};">
+  <div class="rune-glyph" style="transform: scale({glyphScale}); transition: transform 0.3s;">{data.rune}</div>
   <div class="rune-name">{data.runeName}</div>
   <div class="rune-meaning">{data.meaning}</div>
   <div class="rune-divider"></div>
@@ -39,6 +49,29 @@
     <span class="rune-val alert">{data.routing}</span>
   </div>
   <div class="rune-reason">{data.reason}</div>
+
+  {#if rune}
+    <div class="rune-divider"></div>
+    <div class="rune-section">
+      <span class="rune-key">weight</span>
+      <span class="rune-val" style="color: {rune.border};">{rune.weight.toFixed(2)}</span>
+    </div>
+  {/if}
+
+  {#if diag}
+    <div class="rune-divider"></div>
+    <div class="diag-row">
+      <span class="diag-grade" style="color: {diag.color};">{diag.grade}</span>
+      <span class="diag-score" style="color: {diag.color};">{diag.score}</span>
+      {#each diag.dimensions as dim}
+        <span class="diag-dim">{dim.label}:{dim.value}</span>
+      {/each}
+    </div>
+  {/if}
+
+  {#if topo?.isCyclic}
+    <div class="topo-cyclic">cyclic path</div>
+  {/if}
 </div>
 <Handle type="target" position={Position.Top} id="top" />
 <Handle type="source" position={Position.Bottom} id="bottom" />
@@ -50,6 +83,7 @@
     border-radius: 10px;
     padding: 1rem 1.25rem;
     min-width: 280px;
+    transition: border-color 0.3s, box-shadow 0.3s;
   }
   .rune-glyph {
     font-size: 2rem;
@@ -106,5 +140,40 @@
     font-size: 0.55rem;
     color: #44423d;
     margin-top: 0.25rem;
+  }
+
+  /* Diagnostic row */
+  .diag-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .diag-grade {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+  .diag-score {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.55rem;
+    opacity: 0.8;
+  }
+  .diag-dim {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.45rem;
+    color: #7a7770;
+  }
+
+  /* Topology cyclic */
+  .topo-cyclic {
+    margin-top: 0.4rem;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.5rem;
+    font-weight: 700;
+    color: #e85a5a;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    text-align: center;
   }
 </style>

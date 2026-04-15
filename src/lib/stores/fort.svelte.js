@@ -1,6 +1,13 @@
 import { generateFortFromManifest, DEMO_MANIFESTS } from "$lib/fortGenerator.js";
 
 /**
+ * Registry of imported forts (repo imports, etc.) that persist across zoom levels.
+ * Keyed by fort ID (e.g. "owner/repo").
+ * @type {Map<string, { nodes: any[], edges: any[], manifest: any, name: string, color: string, rune: string }>}
+ */
+const _importedForts = new Map();
+
+/**
  * @typedef {Object} FortState
  * @property {number} zoomLevel - 0-4
  * @property {string} activeFortId - which fort we're zoomed into
@@ -32,9 +39,32 @@ export function getFort() {
   return fort;
 }
 
-/** Load the demo district (L0 with all ecosystem forts) */
+/** Load the demo district (L0 with all ecosystem forts + imported forts) */
 export function loadDemoDistrict() {
   const district = generateFortFromManifest("district", null);
+
+  // Append imported forts to the district as additional fort nodes
+  if (_importedForts.size > 0) {
+    const baseY = Math.max(...district.nodes.map((n) => n.position.y)) + 100;
+    let idx = 0;
+    for (const [id, imp] of _importedForts) {
+      const col = idx % 4;
+      const row = Math.floor(idx / 4);
+      district.nodes.push({
+        id: `imported-${id}`,
+        type: "fort",
+        position: { x: col * 220 + 20, y: baseY + row * 180 },
+        data: {
+          label: imp.name,
+          rune: imp.rune,
+          role: "Imported",
+          color: imp.color,
+        },
+      });
+      idx++;
+    }
+  }
+
   fort.zoomLevel = 0;
   fort.activeFortId = "";
   fort.activeRoomId = null;
@@ -49,6 +79,22 @@ export function loadDemoDistrict() {
 
 /** Zoom into a specific fort (L1 campus view) */
 export function zoomIntoFort(fortId) {
+  // Check imported forts first (strip "imported-" prefix from district node IDs)
+  const importKey = fortId.replace(/^imported-/, "");
+  const imported = _importedForts.get(importKey);
+  if (imported) {
+    fort.zoomLevel = 1;
+    fort.activeFortId = fortId;
+    fort.activeRoomId = null;
+    fort.activeNodeId = null;
+    fort.nodes = imported.nodes;
+    fort.edges = imported.edges;
+    fort.manifest = imported.manifest;
+    fort.fortName = imported.name;
+    fort.dirty = true;
+    return;
+  }
+
   const manifest = DEMO_MANIFESTS[fortId];
   if (!manifest) return;
   const campus = generateFortFromManifest("campus", manifest);
@@ -135,4 +181,43 @@ export function markSaved(id) {
 export function setFortName(name) {
   fort.fortName = name;
   fort.dirty = true;
+}
+
+/** Deterministic hash for rune assignment */
+function _hash(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+const _FUTHARK = ["ᚠ","ᚢ","ᚦ","ᚨ","ᚱ","ᚲ","ᚷ","ᚹ","ᚺ","ᚾ","ᛁ","ᛃ","ᛇ","ᛈ","ᛉ","ᛊ","ᛏ","ᛒ","ᛖ","ᛗ","ᛚ","ᛜ","ᛞ","ᛟ"];
+const _COLORS = ["#e8a84c","#6ac48c","#5b6a8a","#c4956a","#8a9a9e","#e85a5a"];
+
+/** Load an imported fort (from repo import or external source) */
+export function loadImportedFort(nodes, edges, name, manifest = null) {
+  const h = _hash(name);
+  _importedForts.set(name, {
+    nodes,
+    edges,
+    manifest,
+    name,
+    rune: _FUTHARK[h % _FUTHARK.length],
+    color: _COLORS[h % _COLORS.length],
+  });
+
+  fort.zoomLevel = 1;
+  fort.activeFortId = `imported-${name}`;
+  fort.activeRoomId = null;
+  fort.activeNodeId = null;
+  fort.nodes = nodes;
+  fort.edges = edges;
+  fort.manifest = manifest;
+  fort.savedFortId = null;
+  fort.fortName = name;
+  fort.dirty = true;
+}
+
+/** Get count of imported forts */
+export function getImportedFortCount() {
+  return _importedForts.size;
 }

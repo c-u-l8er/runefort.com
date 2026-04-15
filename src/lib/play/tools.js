@@ -64,6 +64,61 @@ export const BUILTIN_TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "toggle_overlay",
+      description:
+        "Toggle a visualization overlay lens on the fort view.",
+      parameters: {
+        type: "object",
+        properties: {
+          overlay: {
+            type: "string",
+            description: "Overlay key to toggle (e.g. flow, thermal, confidence, topology, dependency, risk, kappa)",
+          },
+        },
+        required: ["overlay"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "start_benchmark",
+      description:
+        "Start a token flow benchmark visualization. Animates particles flowing along edges to show token throughput, latency, and concurrency.",
+      parameters: {
+        type: "object",
+        properties: {
+          edgeId: {
+            type: "string",
+            description: "Specific edge ID to animate (omit to animate all edges)",
+          },
+          tokensPerSecond: {
+            type: "number",
+            description: "Token throughput (default 50)",
+          },
+          latencyMs: {
+            type: "number",
+            description: "Latency in ms — affects color: <200 green, <1000 amber, else red (default 300)",
+          },
+          concurrency: {
+            type: "number",
+            description: "Number of concurrent particles per edge (default 3, max 8)",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "stop_benchmark",
+      description: "Stop all token flow animations.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
 ];
 
 /**

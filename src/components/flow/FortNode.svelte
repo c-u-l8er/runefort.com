@@ -1,9 +1,17 @@
 <script>
   import { Handle, Position } from "@xyflow/svelte";
+  import { isOverlayActive } from "$lib/stores/overlays.svelte.js";
+  import { thermalStyle, topologyStyle } from "$lib/overlayEffects.js";
   let { data } = $props();
+
+  let thermal = $derived(isOverlayActive("thermal") ? thermalStyle(0.5) : null);
+  let topo = $derived(isOverlayActive("topology") ? topologyStyle(data, "fort") : null);
+
+  let overlayGlow = $derived(thermal?.glow ?? topo?.glow ?? "none");
+  let overlayBorder = $derived(topo?.border ?? data.color + "40");
 </script>
 
-<div class="fort-node" style="border-color: {data.color}40;">
+<div class="fort-node" style="border-color: {overlayBorder}; box-shadow: {overlayGlow};">
   <div class="fort-rune" style="color: {data.color};">{data.rune}</div>
   <div class="fort-label">{data.label}</div>
   <div class="fort-role">{data.role}</div>
@@ -21,6 +29,7 @@
     padding: 0.75rem 1rem;
     min-width: 130px;
     text-align: center;
+    transition: border-color 0.3s, box-shadow 0.3s;
   }
   .fort-rune {
     font-size: 1.2rem;

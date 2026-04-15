@@ -14,6 +14,7 @@
   import WallNode from "../../components/flow/WallNode.svelte";
   import BridgeNode from "../../components/flow/BridgeNode.svelte";
   import DistrictNode from "../../components/flow/DistrictNode.svelte";
+  import AnimatedEdge from "../../components/flow/AnimatedEdge.svelte";
 
   // App components
   import OverlayBar from "../../components/app/OverlayBar.svelte";
@@ -24,6 +25,8 @@
   import ApiKeyModal from "../../components/app/ApiKeyModal.svelte";
   import McpPanel from "../../components/app/McpPanel.svelte";
   import ChatPanel from "../../components/app/ChatPanel.svelte";
+  import RepoImportModal from "../../components/app/RepoImportModal.svelte";
+  import WorkspaceSwitcher from "../../components/app/WorkspaceSwitcher.svelte";
 
   // Stores
   import { getFort, loadDemoDistrict, zoomIntoFort, zoomIntoRoom, zoomIntoNode, zoomIntoRune, zoomOut, loadSavedFort } from "$lib/stores/fort.svelte.js";
@@ -32,11 +35,17 @@
   import { listForts, loadFort, deleteFort } from "$lib/persistence.js";
   import { initApiKey, setApiKey, hasApiKey } from "$lib/stores/apikey.svelte.js";
   import { autoConnect, connectedCount } from "$lib/stores/mcp.svelte.js";
+  import { initWorkspaces, getWorkspaceState } from "$lib/stores/workspace.svelte.js";
 
   const nodeTypes = {
     fort: FortNode, room: RoomNode, tile: TileNode, rune: RuneNode,
     gate: GateNode, hall: HallNode, tower: TowerNode, wall: WallNode,
     bridge: BridgeNode, district: DistrictNode,
+  };
+
+  const edgeTypes = {
+    animated: AnimatedEdge,
+    default: AnimatedEdge,
   };
 
   const fort = getFort();
@@ -48,6 +57,7 @@
   let showApiKeyModal = $state(false);
   let showMcpPanel = $state(false);
   let showChatPanel = $state(false);
+  let showRepoImport = $state(false);
   /** @type {any[]} */
   let savedForts = $state([]);
 
@@ -58,6 +68,8 @@
     initAuth();
     initApiKey();
     autoConnect();
+    // Init workspaces after auth is ready (if authenticated)
+    initWorkspaces();
   });
 
   function handleKeydown(e) {
@@ -117,6 +129,10 @@
     if (isOverlayActive("flow")) return { stroke: "#e8a84c", strokeWidth: 2 };
     if (isOverlayActive("thermal")) return { stroke: "#e85a5a", strokeWidth: 1.5 };
     if (isOverlayActive("topology")) return { stroke: "#c4956a", strokeWidth: 2 };
+    if (isOverlayActive("temporal")) return { stroke: "#8a9a9e", strokeWidth: 1.5 };
+    if (isOverlayActive("diagnostic")) return { stroke: "#5b6a8a", strokeWidth: 1.5 };
+    if (isOverlayActive("confidence")) return { stroke: "#6ac48c", strokeWidth: 1.5 };
+    if (isOverlayActive("rune")) return { stroke: "#c4956a", strokeWidth: 1.5 };
     return {};
   }
 </script>
@@ -131,7 +147,11 @@
   <!-- Top toolbar -->
   <header class="toolbar">
     <div class="toolbar-left">
-      <a href="/" class="brand"><span class="brand-rune">ᚲ</span> RuneFort</a>
+      {#if auth.user}
+        <WorkspaceSwitcher />
+      {:else}
+        <a href="/" class="brand"><span class="brand-rune">ᚲ</span> RuneFort</a>
+      {/if}
       <button class="tool-btn chat-btn" onclick={() => { showChatPanel = !showChatPanel; }} title="Chat">
         <span class="chat-icon">&#x1F4AC;</span>
       </button>
@@ -153,6 +173,9 @@
       <ZoomBar />
     </div>
     <div class="toolbar-right">
+      <button class="tool-btn" onclick={() => { showRepoImport = true; }} title="Import Repo">
+        <span class="import-icon">&#x1F4C2;</span>
+      </button>
       <button class="tool-btn" onclick={() => { showApiKeyModal = true; }} title="API Key (BYOK)">
         <span class="key-icon">&#x1F511;</span>
         {#if hasApiKey()}
@@ -190,6 +213,7 @@
         nodes={$state.snapshot(fort.nodes)}
         edges={$state.snapshot(fort.edges)}
         {nodeTypes}
+        {edgeTypes}
         fitView
         colorMode="dark"
         defaultEdgeOptions={{ animated: false, style: getEdgeStyle() }}
@@ -267,6 +291,10 @@
   open={showChatPanel}
   onclose={() => { showChatPanel = false; }}
   onRequestKey={() => { showChatPanel = false; showApiKeyModal = true; }}
+/>
+<RepoImportModal
+  open={showRepoImport}
+  onclose={() => { showRepoImport = false; }}
 />
 
 <style>
@@ -377,7 +405,7 @@
     color: #e8a84c;
     border-color: rgba(232, 168, 76, 0.3);
   }
-  .key-icon, .plug-icon {
+  .key-icon, .plug-icon, .import-icon {
     font-size: 0.75rem;
     line-height: 1;
   }

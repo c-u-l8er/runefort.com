@@ -2,6 +2,7 @@
 // These tools operate on fort/overlay stores directly.
 
 import { BUILTIN_TOOLS } from "./tools.js";
+import { startFlow, stopAllFlows, simulateBenchmark } from "./tokenflow.js";
 
 /**
  * Execute a built-in RuneFort tool.
@@ -79,6 +80,27 @@ export function executeBuiltinTool(name, args, ctx) {
 
     case "save_blueprint": {
       return JSON.stringify({ error: "save_blueprint requires auth — use the Save button in the toolbar" });
+    }
+
+    case "start_benchmark": {
+      const { edgeId, tokensPerSecond, latencyMs, concurrency } = args;
+      const config = { tokensPerSecond, latencyMs, concurrency };
+      if (edgeId) {
+        startFlow(edgeId, config);
+        return JSON.stringify({ success: true, action: "started_flow", edgeId });
+      }
+      // Animate all edges
+      const cleanup = simulateBenchmark({}, fortState.edges);
+      return JSON.stringify({
+        success: true,
+        action: "started_benchmark",
+        edgeCount: fortState.edges.length,
+      });
+    }
+
+    case "stop_benchmark": {
+      stopAllFlows();
+      return JSON.stringify({ success: true, action: "stopped_flows" });
     }
 
     default:
