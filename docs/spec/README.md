@@ -109,6 +109,7 @@ Same floor plan, different lenses. Overlays are toggleable layers rendered on to
 | **Rune** | `R` | The dark code — operation configs, policy rules, causal chains | Graphonomous node metadata, [&] bindings |
 | **Confidence** | `C` | Node confidence heatmap (bright = high, dim = low) | Graphonomous confidence values |
 | **Topology** | `K` | SCC highlighting, kappa values, cycle visualization | Graphonomous route machine (κ analysis) |
+| **Assembly** | `A` | Dark factory pipeline status — spec version, build status, trust score, deploy stage | Agentelic build status + FleetPrompt trust + SpecPrompt spec hash (Phase 6+) |
 
 ---
 
@@ -510,6 +511,18 @@ PRISM MCP (live)
 PULSE telemetry (live)
   → phase_metrics → drive thermal overlay
   → loop_metrics → drive clocktower cadence
+
+Dark Factory Pipeline (live — Phase 6+)
+  → SpecPrompt ConsolidationEvents → spec version badge on fort gate
+  → Agentelic Build status → build corridor tiles (pass/fail/running)
+  → FleetPrompt trust scores → trust glow on FleetPrompt fort
+  → Deployment status → deployment gate state (staging/canary/prod)
+  → GitHub API → branch/PR/CI badges on imported forts
+
+Session Learning (Phase 6+)
+  → Chat tool call results → graphonomous.act(action: "store_node")
+  → Fort navigation patterns → graphonomous.learn(action: "from_outcome")
+  → Cross-session context → graphonomous.retrieve(action: "context") at fort load
 ```
 
 ### 7.3 Supabase Schema
@@ -583,10 +596,20 @@ RuneFort reads (MCP tool calls from agent):
   - prism.diagnose(action: "leaderboard")                    → system rankings
   - prism.diagnose(action: "failure_patterns")               → anomaly data
 
+Dark factory reads (Phase 6+ — Assembly overlay):
+  - agentelic.agent_status(agent_id: "...")                   → build status, test results, deploy stage
+  - agentelic.template_list(framework: "...", product_type: "...") → available templates
+  - fleetprompt.registry_search(query: "...")                 → published agents, trust scores
+  - fleetprompt.registry_manifest(agent_slug: "...", version: "...") → manifest detail
+
+RuneFort writes (Phase 6+ — session learning):
+  - graphonomous.act(action: "store_node", ...)              → persist chat insights + fort navigation patterns
+  - graphonomous.learn(action: "from_outcome", ...)          → feed interaction outcomes back to knowledge graph
+
 RuneFort does NOT:
-  - Make LLM calls (rendering only)
-  - Write to Graphonomous (read-only visualization)
+  - Make LLM calls (the agent does all LLM work, RuneFort is pure visualization + persistence)
   - Modify PRISM state (observation only)
+  - Modify Agentelic state (reads build status, does not trigger builds — the agent triggers via chat)
 ```
 
 ---
@@ -686,6 +709,24 @@ RuneFort does NOT:
       "source_phase": "consolidate_idle",
       "target_phase": "act_render",
       "delivery": "best_effort"
+    },
+    {
+      "signal": "ConsolidationEvent",
+      "direction": "consume",
+      "source_loop": "agentelic.build_pipeline",
+      "source_phase": "consolidate_artifacts",
+      "target_phase": "act_render",
+      "delivery": "best_effort",
+      "description": "Build completion events drive Assembly overlay updates (Phase 6+)"
+    },
+    {
+      "signal": "ReputationUpdate",
+      "direction": "consume",
+      "source_loop": "fleetprompt.trust",
+      "source_phase": "act_rerank",
+      "target_phase": "act_render",
+      "delivery": "best_effort",
+      "description": "Trust score changes drive Assembly overlay trust badges (Phase 6+)"
     }
   ],
   "telemetry": {
@@ -730,6 +771,33 @@ RuneFort does NOT:
 - Room growth/shrinkage
 - Wall dynamics
 - Layout optimization from usage patterns
+
+### Phase 6: Dark Factory Control Room
+- **Pipeline overlay** — new overlay key `A` (Assembly): shows the dark factory pipeline status for each product fort
+  - SpecPrompt spec version + validation status per fort
+  - Agentelic build status (parsing → generating → compiling → testing → succeeded/failed)
+  - FleetPrompt trust score + publish status
+  - Deployment status (staging → canary → production)
+- **Pipeline trigger from fort** — click a fort's gate to trigger a build (calls `agent_build` MCP tool)
+- **Build history corridor** — L2 zoom shows build history as a corridor of tiles (each tile = one build, color = pass/fail)
+- **Test result room** — L3 zoom into test results: each acceptance test is a tile, green = pass, red = fail
+- **Live telemetry wiring** — overlays show real data from MCP calls instead of synthetic data:
+  - Thermal overlay reads `graphonomous.consolidate(action: "stats")` for real activity
+  - Diagnostic overlay reads `prism.observe(action: "latest_judgments")` for real CL scores
+  - Confidence overlay reads `graphonomous.retrieve(action: "context")` for real confidence values
+- **Outcome persistence** — chat tool call results stored back to Graphonomous via `act(action: "store_node")` so forts learn across sessions
+- **GitHub integration** — repo import gains live status:
+  - Branch indicator (current branch, open PRs count)
+  - Last commit timestamp
+  - CI workflow status (passing/failing/running)
+  - Refresh on push via Supabase Realtime subscription
+
+### Phase 7: Multi-Tenant Dark Factory
+- **Workspace-scoped forts** — each workspace gets its own district view
+- **Private fort sharing** — invite collaborators to view your district (Supabase RLS)
+- **Pipeline event stream** — real-time feed of dark factory events (spec changes, builds, deploys) as animated tokens flowing through bridge connections
+- **Cross-workspace bridges** — B2B privacy boundaries for partner organizations: see their fort walls but not their rooms
+- **RuneFort-as-PRISM-dashboard** — diagnostic overlay becomes a full PRISM integration: trigger benchmarks from the fort, see results in the diagnostic overlay, drill into failure clusters at L4 zoom
 
 ---
 
