@@ -6,6 +6,7 @@
   import SixtySecond from "../components/SixtySecond.svelte";
   import SemanticZoom from "../components/SemanticZoom.svelte";
   import Vocabulary from "../components/Vocabulary.svelte";
+  import Nesting from "../components/Nesting.svelte";
   import Ecosystem from "../components/Ecosystem.svelte";
   import TechStack from "../components/TechStack.svelte";
   import RuneLayer from "../components/RuneLayer.svelte";
@@ -32,6 +33,7 @@
 <SixtySecond />
 <SemanticZoom />
 <Vocabulary />
+<Nesting />
 <Ecosystem />
 <TechStack />
 <RuneLayer />

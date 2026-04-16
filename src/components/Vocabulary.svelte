@@ -73,6 +73,56 @@
         Click a wall &rarr; Rune reveals. <em>No overlay menu &mdash; motion is the menu.</em>
       </p>
     {:else}
+      <!-- Minecraft rule: one primitive, composed — the headline of the Pieces tab. -->
+      <div class="minecraft-row" role="tabpanel" aria-label="The Minecraft Rule">
+        <div class="mc-panel">
+          <svg viewBox="0 0 60 60" aria-hidden="true">
+            <rect class="mc-tile" x="22" y="22" width="16" height="16" rx="1" />
+          </svg>
+          <div class="mc-label">1 tile</div>
+          <div class="mc-sub">the only primitive</div>
+        </div>
+        <div class="mc-arrow">&rarr;</div>
+        <div class="mc-panel">
+          <svg viewBox="0 0 60 60" aria-hidden="true">
+            <rect class="mc-tile" x="14" y="14" width="16" height="16" rx="1" />
+            <rect class="mc-tile" x="30" y="14" width="16" height="16" rx="1" />
+            <rect class="mc-tile" x="14" y="30" width="16" height="16" rx="1" />
+            <rect class="mc-tile" x="30" y="30" width="16" height="16" rx="1" />
+          </svg>
+          <div class="mc-label">Room</div>
+          <div class="mc-sub">tiles sharing borders</div>
+        </div>
+        <div class="mc-panel">
+          <svg viewBox="0 0 60 60" aria-hidden="true">
+            <rect class="mc-tile" x="6" y="22" width="12" height="16" rx="1" />
+            <rect class="mc-tile" x="18" y="22" width="12" height="16" rx="1" />
+            <rect class="mc-tile" x="30" y="22" width="12" height="16" rx="1" />
+            <rect class="mc-tile" x="42" y="22" width="12" height="16" rx="1" />
+          </svg>
+          <div class="mc-label">Hall</div>
+          <div class="mc-sub">tiles in a line</div>
+        </div>
+        <div class="mc-panel">
+          <svg viewBox="0 0 60 60" aria-hidden="true">
+            <rect class="mc-tile" x="22" y="6" width="16" height="12" rx="1" />
+            <rect class="mc-tile" x="22" y="18" width="16" height="12" rx="1" />
+            <rect class="mc-tile" x="22" y="30" width="16" height="12" rx="1" />
+            <rect class="mc-tile" x="22" y="42" width="16" height="12" rx="1" />
+          </svg>
+          <div class="mc-label">Tower</div>
+          <div class="mc-sub">tiles stacked</div>
+        </div>
+      </div>
+
+      <p class="minecraft-rule">
+        <span class="rule-headline">The Minecraft rule.</span>
+        Everything in the fort is the same primitive &mdash; the tile. Rooms, halls,
+        towers, gates, walls, bridges, and nested forts are all just tiles arranged
+        by one of four composition rules. <em>No special-case rendering. If you
+        can&rsquo;t build it from tiles, it doesn&rsquo;t belong in the fort.</em>
+      </p>
+
       <div class="piece-grid" role="tabpanel">
         {#each pieces as p}
           <div class="piece-card">
@@ -82,10 +132,6 @@
           </div>
         {/each}
       </div>
-      <p class="tab-caption">
-        The Minecraft constraint: everything is tiles. A room is tiles with shared borders.
-        A corridor is tiles in a line. <em>If you can't build it from tiles, it doesn't belong in the fort.</em>
-      </p>
     {/if}
   </div>
 </section>
@@ -227,6 +273,74 @@
     margin-top: 1rem;
   }
   .tab-caption em {
+    font-style: normal;
+    color: var(--text);
+  }
+
+  /* Minecraft rule — headline strip above the piece grid */
+  .minecraft-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 0 0 1.5rem;
+    padding: 1.75rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .mc-panel {
+    text-align: center;
+    min-width: 5.5rem;
+  }
+  .mc-panel svg {
+    width: 64px;
+    height: 64px;
+    display: block;
+    margin: 0 auto 0.5rem;
+  }
+  .mc-tile {
+    fill: var(--amber-dim);
+    stroke: var(--amber);
+    stroke-width: 1.5;
+  }
+  .mc-label {
+    font-family: var(--serif);
+    font-size: 0.95rem;
+    color: var(--text);
+    margin-bottom: 0.2rem;
+  }
+  .mc-sub {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .mc-arrow {
+    color: var(--amber);
+    font-size: 1.4rem;
+    opacity: 0.6;
+  }
+  @media (max-width: 600px) {
+    .mc-arrow { display: none; }
+    .minecraft-row { gap: 0.5rem; padding: 1.25rem 0.75rem; }
+  }
+
+  .minecraft-rule {
+    font-size: 0.95rem;
+    color: var(--dim);
+    line-height: 1.7;
+    max-width: 720px;
+    margin: 0 0 2rem;
+  }
+  .rule-headline {
+    font-family: var(--serif);
+    color: var(--text);
+    font-weight: 500;
+  }
+  .minecraft-rule em {
     font-style: normal;
     color: var(--text);
   }
