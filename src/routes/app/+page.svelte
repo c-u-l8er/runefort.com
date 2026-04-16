@@ -42,7 +42,7 @@
   import { listForts, loadFort, deleteFort } from "$lib/persistence.js";
   import { initApiKey, setApiKey, hasApiKey } from "$lib/stores/apikey.svelte.js";
   import { autoConnect, connectedCount } from "$lib/stores/mcp.svelte.js";
-  import { initWorkspaces, getWorkspaceState } from "$lib/stores/workspace.svelte.js";
+  import { getWorkspaceState } from "$lib/stores/workspace.svelte.js";
   import { syncPollingToOverlays, stopAllPolling as stopTelemetry } from "$lib/stores/telemetry.svelte.js";
   import { loadSessionContext } from "$lib/play/session-learning.js";
   import { getFactoryState, stopWatching as stopFactory } from "$lib/stores/factory.svelte.js";
@@ -84,8 +84,8 @@
       // Load cross-session context after MCP connections are ready
       loadSessionContext("ecosystem");
     });
-    // Init workspaces after auth is ready (if authenticated)
-    initWorkspaces();
+    // Workspaces are now initialized from auth.svelte.js on auth state change
+    // (including INITIAL_SESSION hydration), so no eager call is needed here.
 
     return () => {
       stopTelemetry();

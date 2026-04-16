@@ -2,14 +2,13 @@
   import Nav from "../components/Nav.svelte";
   import Hero from "../components/Hero.svelte";
   import Vision from "../components/Vision.svelte";
-  import SemanticZoom from "../components/SemanticZoom.svelte";
   import DarkFactory from "../components/DarkFactory.svelte";
-  import Overlays from "../components/Overlays.svelte";
-  import Components from "../components/Components.svelte";
-  import RuneLayer from "../components/RuneLayer.svelte";
+  import SixtySecond from "../components/SixtySecond.svelte";
+  import SemanticZoom from "../components/SemanticZoom.svelte";
+  import Vocabulary from "../components/Vocabulary.svelte";
   import Ecosystem from "../components/Ecosystem.svelte";
-  import WhyNotDashboard from "../components/WhyNotDashboard.svelte";
   import TechStack from "../components/TechStack.svelte";
+  import RuneLayer from "../components/RuneLayer.svelte";
   import Cta from "../components/Cta.svelte";
   import Footer from "../components/Footer.svelte";
 </script>
@@ -29,13 +28,12 @@
 <Nav />
 <Hero />
 <Vision />
-<SemanticZoom />
 <DarkFactory />
-<Overlays />
-<Components />
-<RuneLayer />
+<SixtySecond />
+<SemanticZoom />
+<Vocabulary />
 <Ecosystem />
-<WhyNotDashboard />
 <TechStack />
+<RuneLayer />
 <Cta />
 <Footer />

@@ -2,10 +2,9 @@
     <div class="nav-inner">
         <a href="#" class="nav-brand"><span class="rune">ᚲ</span> RuneFort</a>
         <ul class="nav-links">
-            <li><a href="#vision">Vision</a></li>
-            <li><a href="#zoom">Zoom</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
             <li><a href="#dark-factory">Dark Factory</a></li>
-            <li><a href="#overlays">Overlays</a></li>
+            <li><a href="#zoom">Zoom</a></li>
             <li><a href="#ecosystem">Ecosystem</a></li>
             <li>
                 <a
@@ -14,7 +13,7 @@
                     rel="noopener">GitHub</a
                 >
             </li>
-            <li><a href="/app" class="nav-cta">Try It</a></li>
+            <li><a href="/app" class="nav-cta">Walk a Fort</a></li>
         </ul>
     </div>
 </nav>

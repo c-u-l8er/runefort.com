@@ -1,4 +1,5 @@
 import { getSupabase } from "$lib/supabase.js";
+import { initWorkspaces, clearWorkspaces } from "$lib/stores/workspace.svelte.js";
 
 /** @type {{ user: any, loading: boolean, showModal: boolean }} */
 let auth = $state({ user: null, loading: true, showModal: false });
@@ -15,6 +16,22 @@ export function closeAuthModal() {
   auth.showModal = false;
 }
 
+/**
+ * Sync the workspace store to the current auth user.
+ * Called on every auth state change so workspaces re-initialize after
+ * sign-in and clear on sign-out.
+ * @param {any} user
+ */
+function syncWorkspacesForUser(user) {
+  if (user) {
+    initWorkspaces().catch((err) => {
+      console.warn("initWorkspaces failed:", err);
+    });
+  } else {
+    clearWorkspaces();
+  }
+}
+
 export async function initAuth() {
   const sb = getSupabase();
   if (!sb) {
@@ -24,9 +41,13 @@ export async function initAuth() {
   const { data } = await sb.auth.getSession();
   auth.user = data.session?.user ?? null;
   auth.loading = false;
+  syncWorkspacesForUser(auth.user);
 
   sb.auth.onAuthStateChange((_event, session) => {
-    auth.user = session?.user ?? null;
+    const nextUser = session?.user ?? null;
+    const changed = auth.user?.id !== nextUser?.id;
+    auth.user = nextUser;
+    if (changed) syncWorkspacesForUser(nextUser);
   });
 }
 

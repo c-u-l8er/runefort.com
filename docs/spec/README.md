@@ -1,9 +1,48 @@
 # RuneFort Spec
 
 **Product:** RuneFort — Spatial cognition interface for continual learning agents
-**Status:** v0.1 draft
+**Status:** v0.1 (self-teaching pass)
 **Owner:** [&] Protocol ecosystem
-**Date:** 2026-04-13
+**Date:** 2026-04-16
+
+---
+
+## 0. Simplicity Principle
+
+**The fort teaches itself.** The default experience is *play first, understand
+later*. A first-time visitor never has to read a manual before the spatial view
+pays off. Every layer of the system — the three protocols, the nine overlays,
+the nine composites, the twenty-four runes — is **available** when you want it,
+not **required** before you begin.
+
+This principle is a constraint on every other section of this spec:
+
+1. **Manifests stay canonical.** PULSE (`*.pulse.json`), [&] (`*.ampersand.json`),
+   and PRISM remain the authoritative source of truth. The blueprint is a *view*
+   of them, never a replacement. This keeps forts portable across consumers that
+   are not RuneFort.
+2. **Structure is the default lens.** Only the Structure overlay is on by default
+   (§2.3). The other eight overlays fade in via proximity, hover, or click on
+   the mechanism itself — not via an overlay menu. Motion is the menu.
+3. **One primitive, derived composites.** The tile is the only primitive a user
+   places (§2.2). Rooms, corridors, walls, gates, towers, bridges, and nested
+   forts are inferred from layout + PULSE manifest. Composites are how tiles
+   compose, not additional primitives a user must learn.
+4. **Runes are a power-user inspection layer.** Never shown by default. Revealed
+   by clicking a wall (crack-open), zooming to L4, or toggling the Rune overlay
+   explicitly (§5).
+5. **The Starter Fort teaches the editor.** New users land in a pre-built fort
+   that is already running a tiny `runefort.dark_factory` loop. The fort walks
+   them through its own operation with dismissible floating labels. No empty
+   canvas on first load (§9, Phase 0).
+6. **"Explain in English" is always one click away.** A single button renders
+   a template-based natural-language summary of the loaded PULSE manifest. No
+   LLM call from inside RuneFort — either a deterministic template generator
+   or a routed request to the calling agent (§7.4).
+
+Every design decision below is consistent with these six constraints. Where a
+feature is powerful but would force up-front learning, its discovery is gated
+behind interaction with the fort, not behind onboarding copy.
 
 ---
 
@@ -14,6 +53,24 @@ RuneFort is a spatial visualization and navigation system for AI operating syste
 **Core metaphor:** The fort is what you understand. The runes are what you inspect.
 
 **Design constraint (the Minecraft rule):** Everything is made of the same primitive — the tile. A room is tiles with shared borders. A corridor is tiles in a line. A tower is tiles that stack into zoom levels. No special-case rendering. One primitive composes into any cognitive architecture.
+
+### 1.0 Three-step user promise
+
+The marketing surface (`/`) and the editor (`/app`) both resolve to the same
+three-step product:
+
+1. **Drop a manifest.** Point RuneFort at a `*.pulse.json`. Rooms come from
+   phases, corridors from cross-loop signals, walls from invariants, bridges
+   from connections.
+2. **Walk the fort.** Zoom from district to rune. Hover a corridor → Flow fades
+   in. Walk near a busy room → Thermal glows. Click a wall → Rune reveals.
+3. **Ship the factory.** Press `R!`. The `runefort.dark_factory` loop sequences
+   SpecPrompt → Agentelic → FleetPrompt → deploy, with every stage rendered as
+   a corridor tile.
+
+Steps 1 and 2 are covered by `runefort.spatial_render`. Step 3 is
+`runefort.dark_factory` (§6.1). Both loops run concurrently; both are declared
+as PULSE manifests.
 
 ### 1.1 Positioning
 
@@ -102,7 +159,22 @@ There is no depth limit. The zoom levels repeat recursively.
 
 ### 2.3 Overlay System
 
-Same floor plan, different lenses. Overlays are toggleable layers rendered on top of the structural view (L0 overlay is always on):
+Same floor plan, different lenses. Overlays are a *data model* (same floor plan,
+different sources), not a chrome pattern. The presentation is:
+
+- **Structure is always on.** It is the default, and on first render it is the
+  only overlay visible. A new user sees rooms, corridors, walls, gates, towers —
+  nothing else.
+- **Other overlays fade in on interaction, not via a menu.** Hovering or moving
+  near a corridor fades Flow in on *that corridor*. Approaching a busy room
+  fades Thermal in on *that room*. Clicking a wall cracks open Rune for *that
+  wall*. The overlay scope is local to the interaction.
+- **A "More lenses" disclosure** exposes overlay keys for power users who want
+  to pin an overlay globally (see keys in the table below). No visible top-level
+  overlay menu by default.
+- **Motion is the menu.** This is the §0 simplicity principle applied to the
+  overlay system: you never have to learn that eight overlays exist before they
+  become useful. You discover each one by walking the fort.
 
 | Overlay | Key | What It Shows | Data Source |
 |---------|-----|--------------|-------------|
@@ -115,6 +187,9 @@ Same floor plan, different lenses. Overlays are toggleable layers rendered on to
 | **Confidence** | `C` | Node confidence heatmap (bright = high, dim = low) | Graphonomous confidence values |
 | **Topology** | `K` | SCC highlighting, kappa values, cycle visualization | Graphonomous route machine (κ analysis) |
 | **Assembly** | `A` | Dark factory pipeline status — spec version, build status, trust score, deploy stage | Agentelic build status + FleetPrompt trust + SpecPrompt spec hash (Phase 6+) |
+
+The key column is for the "More lenses" disclosure and for keyboard users who
+want to pin an overlay globally. Default-mode users never see the keys.
 
 ---
 
@@ -377,12 +452,21 @@ These are the declared PULSE cross-loop connections, rendered as bridges:
 
 Runes are not the UI. They are the hidden machinery inside the walls. The fort looks like a fort — stone, rooms, doors. Runes are what you find when you inspect a mechanism.
 
+**Per the §0 simplicity principle, runes are never shown by default and never
+gate understanding.** A user who wants to build and walk a fort does not need to
+know that the Elder Futhark exists. The rune alphabet below is a *power-user
+inspection layer* for operators, SREs, and agents doing deep causal analysis —
+not an onboarding requirement. The marketing surface treats the full alphabet
+as a footer/appendix, not front-door content.
+
 ### 5.1 Rune Visibility
 
 Runes appear only:
 - At **zoom level L4** (single operation detail)
-- When the **Rune overlay (R)** is toggled on at any zoom level
-- When **inspecting a wall, gate, or mechanism** (click to crack open)
+- When the **Rune overlay (R)** is toggled on at any zoom level (via the "More
+  lenses" disclosure — not the default chrome)
+- When **inspecting a wall, gate, or mechanism** (click to crack open — this is
+  the progressive-disclosure entry point used in the default experience)
 
 ### 5.2 Rune Alphabet
 
@@ -617,6 +701,22 @@ RuneFort does NOT:
   - Modify Agentelic state (reads build status, does not trigger builds — the agent triggers via chat)
 ```
 
+#### 7.4.1 "Explain this fort in English"
+
+A single "Explain in English" button renders a human-readable summary of the
+currently loaded fort. Two implementation paths are valid; both respect the
+no-LLM-in-RuneFort rule:
+
+- **Template-based summarizer (default).** A deterministic walker over the
+  loaded PULSE manifest + [&] bindings produces prose from templates. No LLM
+  call. Ships with the editor.
+- **Agent-routed summary (optional).** RuneFort emits a *request* for a
+  summary on a chat channel; the calling agent performs the LLM call and
+  returns the prose. RuneFort displays the result.
+
+The button is available at every zoom level and in the Starter Fort (§9 Phase
+0) — it is one of the first affordances a new user discovers.
+
 ---
 
 ## 8. PULSE Loop Manifest
@@ -745,12 +845,38 @@ RuneFort does NOT:
 
 ## 9. Implementation Phases
 
+### Phase 0: Starter Fort (First-run experience)
+
+A new user landing in `/app` for the first time must NOT see an empty canvas.
+The `/app` route renders a **Starter Fort** — a pre-built fort running the
+`runefort.spatial_render` loop over a seeded `runefort.dark_factory` instance
+with synthetic signals. The fort is already alive when the page loads: a token
+pulses along a corridor, a room glows thermally, a consolidation ripple sweeps
+through every ~15 seconds.
+
+Floating, dismissible labels walk the user through:
+
+1. *"This is a room. It's one phase of a loop."*
+2. *"Hover a corridor to see data flowing."*
+3. *"Click a wall to crack it open and see the mechanism."*
+4. *"Press R! to watch a spec become a deployed agent."*
+
+Each label dismisses on acknowledgment and does not reappear in the same
+workspace. After ~3–5 minutes of exploration, the Starter Fort offers: *"Want to
+build your own? Drag here to start a new room."* Accepting transitions the user
+into a blank editor with the same interaction patterns they have already seen.
+
+The Starter Fort ships with a canned PULSE manifest (`static/starter.pulse.json`)
+so it works before any MCP servers are connected. Connecting Graphonomous /
+PRISM MCPs swaps the synthetic signals for live data on the same fort.
+
 ### Phase 1: Static Blueprint (MVP)
 - Parse PULSE manifests → generate room layout
 - CSS Grid rendering at L1 (campus view)
 - Room labels from phase IDs
 - Click to zoom L1 → L2
-- No live data, no overlays
+- No live data, no overlays other than Structure (§2.3)
+- Default view is Structure-only; other overlays reachable only via click/hover
 
 ### Phase 2: Live Data
 - Connect to Graphonomous MCP → populate rooms with node counts, confidence
@@ -926,3 +1052,36 @@ These three are meta-protocols, not running loops:
 - **[&] Protocol** → rendered as construction material (the stuff forts are built from)
 
 They don't get their own fort because they don't declare their own loop. They are the substrate that forts are made of.
+
+### 10.7 Why Default to Structure-Only (not a 9-overlay toolbar)
+
+Collapsing overlays into a toolbar menu makes all nine lenses equally visible
+on first load, which telegraphs: *"here are eight things to learn before this
+tool is useful."* Empirically that is what kneecaps products like RuneFort
+against Cole's Archon or Cursor 3 on the *simplicity* dimension of adoption.
+
+Defaulting to Structure-only and revealing other overlays via proximity/hover/
+click scopes the cognitive load to the thing the user is looking at right now,
+not to the full overlay catalogue. The power of nine independent overlays is
+preserved (§2.3) — it is just not demanded of first-time users.
+
+### 10.8 Why the Blueprint Is Not the Protocol
+
+An alternative framing considered in design was *"the blueprint IS the protocol"*
+— auto-generating PULSE / [&] / PRISM manifests from the spatial layout. This
+was rejected for three reasons:
+
+1. **Portability.** PULSE manifests are the canonical, portable source of truth
+   across the [&] ecosystem. A non-RuneFort consumer (another agent, another
+   viewer, a CI pipeline) cannot read a spatial layout.
+2. **Lossy encoding.** Many manifest features have no natural spatial encoding
+   — `timeout_ms`, `delivery: at_least_once`, `quorum_before_commit`, nested
+   `inner_loops[]` trigger conditions, phase-level invariants. Inferring these
+   from drag-and-drop is a known source of silent bugs.
+3. **LLM boundary.** Natural-language edits ("make this room deliberate when
+   confidence drops") would require RuneFort to make LLM calls, violating §7.4.
+   The chosen path routes NL edits through the calling agent instead.
+
+Instead, the architecture is: manifests are canonical; the blueprint is a view;
+drag-edits modify the manifest subset that round-trips cleanly; everything else
+is a side-panel structured-form edit.
