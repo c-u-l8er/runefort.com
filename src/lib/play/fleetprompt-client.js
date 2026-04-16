@@ -17,29 +17,23 @@ function getConn() {
 /**
  * Search the FleetPrompt registry for published agents.
  * @param {string} query
- * @returns {Promise<object|null>}
+ * @returns {Promise<object>}
+ * @throws when not connected or MCP call fails
  */
 export async function registrySearch(query) {
   const conn = getConn();
-  if (!conn) return null;
-  try {
-    return await callTool(conn.url, undefined, "registry_search", { query }, conn.sessionId);
-  } catch {
-    return null;
-  }
+  if (!conn) throw new Error("FleetPrompt MCP not connected");
+  return await callTool(conn.url, undefined, "registry_search", { query }, conn.sessionId);
 }
 
 /**
  * Get trust score details for a specific agent.
  * @param {string} agentId
- * @returns {Promise<object|null>}
+ * @returns {Promise<object>}
+ * @throws when not connected or MCP call fails
  */
 export async function registryTrust(agentId) {
   const conn = getConn();
-  if (!conn) return null;
-  try {
-    return await callTool(conn.url, undefined, "registry_trust", { agent_id: agentId }, conn.sessionId);
-  } catch {
-    return null;
-  }
+  if (!conn) throw new Error("FleetPrompt MCP not connected");
+  return await callTool(conn.url, undefined, "registry_trust", { agent_id: agentId }, conn.sessionId);
 }

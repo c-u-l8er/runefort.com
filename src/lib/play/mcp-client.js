@@ -96,6 +96,13 @@ export async function discoverTools(serverUrl, authHeader) {
 
 /**
  * Call a tool on an MCP server via the proxy.
+ *
+ * Stateful MCP servers (e.g. Anubis-based) will reject tool calls made with
+ * an expired / unknown session with a JSON-RPC -32600 "Invalid Request"
+ * (data.message = "Server not initialized"). When that happens we transparently
+ * perform a fresh initialize + notifications/initialized handshake and retry
+ * the call once.
+ *
  * @param {string} serverUrl
  * @param {string} [authHeader]
  * @param {string} toolName
@@ -105,32 +112,100 @@ export async function discoverTools(serverUrl, authHeader) {
  * @returns {Promise<object>} Tool result
  */
 export async function callTool(serverUrl, authHeader, toolName, args, sessionId, signal) {
-  const res = await fetch(PROXY_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    signal,
-    body: JSON.stringify({
-      serverUrl,
-      authHeader: authHeader || undefined,
-      sessionId: sessionId || undefined,
-      request: {
-        jsonrpc: "2.0",
-        id: Date.now(),
-        method: "tools/call",
-        params: { name: toolName, arguments: args },
-      },
-    }),
-  });
+  const send = (sid) =>
+    fetch(PROXY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal,
+      body: JSON.stringify({
+        serverUrl,
+        authHeader: authHeader || undefined,
+        sessionId: sid || undefined,
+        request: {
+          jsonrpc: "2.0",
+          id: Date.now(),
+          method: "tools/call",
+          params: { name: toolName, arguments: args },
+        },
+      }),
+    });
 
+  let res = await send(sessionId);
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Tool call failed ${res.status}: ${text}`);
   }
 
-  const result = await res.json();
+  let result = await res.json();
+
+  // Stale session → re-initialize once and retry
+  if (result.error && isUninitializedSession(result.error)) {
+    const freshSessionId = await reinitializeSession(serverUrl, authHeader);
+    if (freshSessionId) {
+      res = await send(freshSessionId);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Tool call failed ${res.status}: ${text}`);
+      }
+      result = await res.json();
+      // Expose the new session so callers can cache it
+      if (result && !result._mcpSessionId) result._mcpSessionId = freshSessionId;
+    }
+  }
+
   if (result.error) {
     throw new Error(result.error.message || "MCP tool error");
   }
 
   return result.result;
+}
+
+/** @param {{code?: number, message?: string, data?: any}} err */
+function isUninitializedSession(err) {
+  if (!err) return false;
+  if (err.code !== -32600) return false;
+  const dataMsg = typeof err.data === "string" ? err.data : err.data?.message;
+  return /not initialized/i.test(dataMsg || err.message || "");
+}
+
+/**
+ * Perform initialize + notifications/initialized and return the new sessionId.
+ * @param {string} serverUrl
+ * @param {string} [authHeader]
+ * @returns {Promise<string|undefined>}
+ */
+async function reinitializeSession(serverUrl, authHeader) {
+  const initRes = await fetch(PROXY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      serverUrl,
+      authHeader: authHeader || undefined,
+      request: {
+        jsonrpc: "2.0",
+        id: Date.now(),
+        method: "initialize",
+        params: {
+          protocolVersion: "2025-03-26",
+          capabilities: {},
+          clientInfo: { name: "runefort-app", version: "0.1.0" },
+        },
+      },
+    }),
+  });
+  if (!initRes.ok) return undefined;
+  const init = await initRes.json();
+  const newSessionId = init._mcpSessionId;
+  if (!newSessionId) return undefined;
+  await fetch(PROXY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      serverUrl,
+      authHeader: authHeader || undefined,
+      sessionId: newSessionId,
+      request: { jsonrpc: "2.0", method: "notifications/initialized" },
+    }),
+  }).catch(() => {});
+  return newSessionId;
 }

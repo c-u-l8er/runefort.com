@@ -1,5 +1,6 @@
-import { generateFortFromManifest, generateBuildCorridor, generateTestRoom, DEMO_MANIFESTS } from "$lib/fortGenerator.js";
+import { generateFortFromManifest, generateBuildCorridor, generateTestRoom, generateFactoryControlRoom, DEMO_MANIFESTS } from "$lib/fortGenerator.js";
 import { getPipelineData } from "$lib/stores/assembly.svelte.js";
+import { getFactoryState } from "$lib/stores/factory.svelte.js";
 import { trackNavigation } from "$lib/play/session-learning.js";
 
 /**
@@ -143,6 +144,20 @@ export function zoomIntoRune(nodeId) {
   fort.nodes = rune.nodes;
   fort.edges = rune.edges;
   fort.dirty = true;
+}
+
+/** Zoom into factory control room (L2 factory orchestration view) */
+export function zoomIntoFactoryControl(fortId) {
+  const factoryState = getFactoryState();
+  const room = generateFactoryControlRoom(factoryState);
+  fort.zoomLevel = 2;
+  fort.activeRoomId = `factory-${fortId}`;
+  fort.activeNodeId = null;
+  fort.activeBuildId = null;
+  fort.nodes = room.nodes;
+  fort.edges = room.edges;
+  fort.dirty = true;
+  trackNavigation(fortId, 2, "factory-control");
 }
 
 /** Zoom into build corridor for a fort (L2 assembly view) */

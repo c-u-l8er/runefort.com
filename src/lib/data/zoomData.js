@@ -46,7 +46,7 @@ export const L0 = {
   edges: [
     e({ id: "e-graph-prism", source: "graphonomous", target: "prism", label: "OutcomeSignal", animated: true }),
     e({ id: "e-agentro-prism", source: "agentromatic", target: "prism", label: "OutcomeSignal", animated: true }),
-    e({ id: "e-agentelic-webhost", source: "agentelic", target: "webhost", label: "Deploy", sourceHandle: "left", targetHandle: "right" }),
+    e({ id: "e-agentelic-webhost", source: "agentelic", target: "webhost", label: "Deploy", sourceHandle: "left-source", targetHandle: "right" }),
     e({ id: "e-agentelic-fleet", source: "agentelic", target: "fleetprompt", label: "AgentPublish", sourceHandle: "right" }),
     e({ id: "e-delegatic-all", source: "delegatic", target: "shared-ground", label: "PolicyEnforcement", animated: true }),
     e({ id: "e-prism-fleet", source: "prism", target: "fleetprompt", label: "ReputationUpdate" }),

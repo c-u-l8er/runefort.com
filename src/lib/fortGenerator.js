@@ -159,6 +159,19 @@ export const DEMO_MANIFESTS = {
     ],
     hasKappaGate: false,
   },
+  dark_factory: {
+    loop_id: "runefort.dark_factory",
+    label: "Dark Factory", rune: "ᛞ", color: "#e85a5a",
+    role: "Orchestration Loop", schema: "rune.*",
+    phases: [
+      { id: "watch_signals", kind: "retrieve", timeout_ms: 10000 },
+      { id: "triage_classify", kind: "route", timeout_ms: 5000 },
+      { id: "pipeline_execute", kind: "act", timeout_ms: 300000 },
+      { id: "learn_outcomes", kind: "learn", timeout_ms: 30000 },
+      { id: "consolidate_patterns", kind: "consolidate", timeout_ms: 60000 },
+    ],
+    hasKappaGate: true,
+  },
   geofleetic: {
     loop_id: "geofleetic.fleet_learning",
     label: "GeoFleetic", rune: "ᚢ", color: "#6ac48c",
@@ -220,8 +233,8 @@ function generateDistrict() {
     e({ id: "e-agentelic-fleet", source: "agentelic", target: "fleetprompt", label: "AgentPublish", sourceHandle: "right", targetHandle: "left" }),
     e({ id: "e-delegatic-ground", source: "delegatic", target: "shared-ground", label: "PolicyEnforcement", animated: true }),
     e({ id: "e-prism-fleet", source: "prism", target: "fleetprompt", label: "ReputationUpdate" }),
-    e({ id: "e-ttc-webhost", source: "ticktickclock", target: "webhost", label: "SLA", sourceHandle: "left", targetHandle: "right" }),
-    e({ id: "e-geo-graph", source: "geofleetic", target: "graphonomous", label: "Patterns", sourceHandle: "left", targetHandle: "right" }),
+    e({ id: "e-ttc-webhost", source: "ticktickclock", target: "webhost", label: "SLA", sourceHandle: "left-source", targetHandle: "right-target" }),
+    e({ id: "e-geo-graph", source: "geofleetic", target: "graphonomous", label: "Patterns", sourceHandle: "left-source", targetHandle: "right-target" }),
   ];
 
   return { nodes, edges };
@@ -641,6 +654,137 @@ export function generateTestRoom(build) {
         target: id,
         sourceHandle: col === 0 ? "bottom" : "right",
         targetHandle: col === 0 ? "top" : "left",
+      }));
+    }
+  });
+
+  return { nodes, edges };
+}
+
+// ── Factory Control Room Generator (L2 for dark factory) ──
+
+/**
+ * Generate factory control room nodes from factory state.
+ * Shows signal queue → pipeline conveyor → outcome history.
+ * @param {object} factoryState - from getFactoryState()
+ * @returns {{ nodes: object[], edges: object[] }}
+ */
+export function generateFactoryControlRoom(factoryState) {
+  const nodes = [];
+  const edges = [];
+
+  // Title gate
+  nodes.push({
+    id: "factory-gate",
+    type: "gate",
+    position: { x: 300, y: 0 },
+    data: {
+      label: "ᛞ Dark Factory",
+      detail: `${factoryState.loopState} · ${factoryState.signalQueue?.length || 0} signals · ${factoryState.activeRuns?.length || 0} active`,
+    },
+  });
+
+  // Signal queue (left column)
+  const signals = factoryState.signalQueue || [];
+  signals.slice(0, 6).forEach((signal, i) => {
+    const id = `signal-${signal.id?.slice(0, 8) || i}`;
+    nodes.push({
+      id,
+      type: "tile",
+      position: { x: 20, y: 80 + i * 90 },
+      data: {
+        label: signal.classification || "unknown",
+        nodeType: signal.source,
+        confidence: signal.classificationConfidence || 0,
+        content: `${signal.source}: ${signal.fortId}`,
+        timescale: "fast",
+      },
+    });
+    if (i === 0) {
+      edges.push(e({ id: `e-gate-signal`, source: "factory-gate", target: id }));
+    }
+    if (i > 0) {
+      edges.push(e({
+        id: `e-signal-${i}`,
+        source: `signal-${(signals[i - 1].id?.slice(0, 8)) || (i - 1)}`,
+        target: id,
+      }));
+    }
+  });
+
+  // Active pipeline runs (center — conveyor belt)
+  const runs = factoryState.activeRuns || [];
+  const STAGES = ["spec_update", "build", "trust", "deploy"];
+  runs.forEach((run, ri) => {
+    const baseY = 80 + ri * 140;
+
+    STAGES.forEach((stage, si) => {
+      const phase = run.phases?.[si];
+      const id = `conveyor-${run.id?.slice(0, 8) || ri}-${stage}`;
+      nodes.push({
+        id,
+        type: "conveyor",
+        position: { x: 250 + si * 150, y: baseY },
+        data: {
+          stage,
+          phase: phase?.phase,
+          status: phase?.status || "pending",
+          fortId: run.fortId,
+          phases: run.phases,
+          rune: PHASE_RUNES[phase?.phase?.split("_")[0]] || "ᚠ",
+        },
+      });
+
+      if (si > 0) {
+        edges.push(e({
+          id: `e-conveyor-${ri}-${si}`,
+          source: `conveyor-${run.id?.slice(0, 8) || ri}-${STAGES[si - 1]}`,
+          target: id,
+          sourceHandle: "right",
+          targetHandle: "left",
+          animated: phase?.status === "running",
+        }));
+      }
+    });
+
+    // Connect first signal to first conveyor stage
+    if (signals.length > 0 && ri === 0) {
+      edges.push(e({
+        id: `e-signal-conveyor`,
+        source: `signal-${signals[0].id?.slice(0, 8) || 0}`,
+        target: `conveyor-${run.id?.slice(0, 8) || 0}-spec_update`,
+        sourceHandle: "right",
+        targetHandle: "left",
+      }));
+    }
+  });
+
+  // Completed runs (right column — outcome tiles)
+  const completed = (factoryState.completedRuns || []).slice(0, 4);
+  completed.forEach((run, i) => {
+    const id = `outcome-${run.id?.slice(0, 8) || i}`;
+    const succeeded = run.outcome?.status === "success";
+    nodes.push({
+      id,
+      type: "tile",
+      position: { x: 870, y: 80 + i * 90 },
+      data: {
+        label: succeeded ? "✓ success" : "✗ failed",
+        nodeType: "outcome",
+        confidence: succeeded ? 0.9 : 0.3,
+        content: `${run.fortId} — ${run.outcome?.status || run.stage}`,
+        timescale: "medium",
+      },
+    });
+
+    // Connect last conveyor to first outcome
+    if (i === 0 && runs.length > 0) {
+      edges.push(e({
+        id: `e-conveyor-outcome`,
+        source: `conveyor-${runs[0].id?.slice(0, 8) || 0}-deploy`,
+        target: id,
+        sourceHandle: "right",
+        targetHandle: "left",
       }));
     }
   });

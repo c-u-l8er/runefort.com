@@ -1,0 +1,112 @@
+{
+  "pulse_version": "0.1",
+  "loop_id": "runefort.dark_factory",
+  "version": "0.1.0",
+  "description": "Dark factory orchestration loop — watches for signals, triages, runs build pipelines, feeds outcomes back",
+  "phases": [
+    {
+      "id": "watch_signals",
+      "kind": "retrieve",
+      "description": "Monitor GitHub API, Graphonomous OutcomeSignals, and issue feeds for actionable signals",
+      "inputs": ["github_api", "graphonomous_outcomes", "issue_feeds"],
+      "outputs": ["signal_queue"],
+      "timeout_ms": 10000
+    },
+    {
+      "id": "triage_classify",
+      "kind": "route",
+      "description": "Classify signals as spec_change, bug_report, feature_request, regression. Check kappa for cyclic patterns.",
+      "inputs": ["signal_queue", "prior_failures"],
+      "outputs": ["triaged_signals", "routing_decision"],
+      "timeout_ms": 5000
+    },
+    {
+      "id": "pipeline_execute",
+      "kind": "act",
+      "description": "Orchestrate conveyor belt: SpecPrompt -> Agentelic build -> FleetPrompt trust -> deploy gate",
+      "inputs": ["triaged_signals"],
+      "outputs": ["pipeline_outcomes"],
+      "timeout_ms": 300000
+    },
+    {
+      "id": "learn_outcomes",
+      "kind": "learn",
+      "description": "Feed outcomes to Graphonomous, update build heuristics, recalibrate trust, trigger PRISM benchmarks",
+      "inputs": ["pipeline_outcomes"],
+      "outputs": ["outcome_signals", "reputation_updates"],
+      "timeout_ms": 30000
+    },
+    {
+      "id": "consolidate_patterns",
+      "kind": "consolidate",
+      "description": "Merge similar failure patterns, promote reliable templates, retire saturated scenarios",
+      "inputs": ["outcome_history", "failure_patterns"],
+      "outputs": ["updated_rules", "consolidation_events"],
+      "timeout_ms": 60000
+    }
+  ],
+  "closure": "eventual",
+  "cadence": {
+    "type": "periodic",
+    "interval_ms": 60000,
+    "description": "Watch cycle runs every 60 seconds; pipeline runs are event-driven within the cycle"
+  },
+  "substrates": {
+    "memory": "graphonomous://workspace/{ws_id}",
+    "policy": "delegatic://workspace/{ws_id}",
+    "audit": "supabase://rune.factory_runs",
+    "auth": "supabase://auth"
+  },
+  "invariants": {
+    "phase_atomicity": true,
+    "feedback_immutability": true,
+    "append_only_audit": true,
+    "kappa_routing": true,
+    "quorum_before_commit": false,
+    "outcome_grounding": true,
+    "trace_id_propagation": true
+  },
+  "connections": [
+    {
+      "signal": "OutcomeSignal",
+      "direction": "consume",
+      "source_loop": "graphonomous.memory_loop",
+      "source_phase": "learn_outcome",
+      "target_phase": "watch_signals",
+      "delivery": "best_effort"
+    },
+    {
+      "signal": "OutcomeSignal",
+      "direction": "emit",
+      "target_loop": "graphonomous.memory_loop",
+      "source_phase": "learn_outcomes",
+      "delivery": "best_effort"
+    },
+    {
+      "signal": "ReputationUpdate",
+      "direction": "emit",
+      "target_loop": "fleetprompt.marketplace",
+      "source_phase": "learn_outcomes",
+      "delivery": "best_effort"
+    },
+    {
+      "signal": "ConsolidationEvent",
+      "direction": "emit",
+      "target_loop": "runefort.spatial_render",
+      "source_phase": "consolidate_patterns",
+      "delivery": "best_effort"
+    },
+    {
+      "signal": "TopologyContext",
+      "direction": "consume",
+      "source_loop": "graphonomous.memory_loop",
+      "source_phase": "route_topology",
+      "target_phase": "triage_classify",
+      "delivery": "best_effort"
+    }
+  ],
+  "telemetry": {
+    "phase_metrics": ["duration_ms", "signals_processed", "pipelines_started"],
+    "loop_metrics": ["signals_per_hour", "pipeline_success_rate", "mean_time_to_deploy"]
+  }
+}

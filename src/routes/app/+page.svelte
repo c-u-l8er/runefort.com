@@ -30,9 +30,12 @@
   import RepoImportModal from "../../components/app/RepoImportModal.svelte";
   import BuildTriggerDialog from "../../components/app/BuildTriggerDialog.svelte";
   import WorkspaceSwitcher from "../../components/app/WorkspaceSwitcher.svelte";
+  import FactoryPanel from "../../components/app/FactoryPanel.svelte";
+  import FactoryConsole from "../../components/app/FactoryConsole.svelte";
+  import ConveyorNode from "../../components/flow/ConveyorNode.svelte";
 
   // Stores
-  import { getFort, loadDemoDistrict, zoomIntoFort, zoomIntoRoom, zoomIntoNode, zoomIntoRune, zoomIntoBuildCorridor, zoomIntoBuild, zoomOut, loadSavedFort } from "$lib/stores/fort.svelte.js";
+  import { getFort, loadDemoDistrict, zoomIntoFort, zoomIntoRoom, zoomIntoNode, zoomIntoRune, zoomIntoBuildCorridor, zoomIntoBuild, zoomIntoFactoryControl, zoomOut, loadSavedFort } from "$lib/stores/fort.svelte.js";
   import { fetchPipelineStatus, getPipelineData } from "$lib/stores/assembly.svelte.js";
   import { toggleByShortcut, getOverlays, isOverlayActive } from "$lib/stores/overlays.svelte.js";
   import { getAuth, initAuth, openAuthModal, signOut } from "$lib/stores/auth.svelte.js";
@@ -42,12 +45,14 @@
   import { initWorkspaces, getWorkspaceState } from "$lib/stores/workspace.svelte.js";
   import { syncPollingToOverlays, stopAllPolling as stopTelemetry } from "$lib/stores/telemetry.svelte.js";
   import { loadSessionContext } from "$lib/play/session-learning.js";
+  import { getFactoryState, stopWatching as stopFactory } from "$lib/stores/factory.svelte.js";
 
   const nodeTypes = {
     fort: FortNode, room: RoomNode, tile: TileNode, rune: RuneNode,
     gate: GateNode, hall: HallNode, tower: TowerNode, wall: WallNode,
     bridge: BridgeNode, district: DistrictNode,
     buildtile: BuildTileNode, testtile: TestTileNode,
+    conveyor: ConveyorNode,
   };
 
   const edgeTypes = {
@@ -65,6 +70,7 @@
   let showMcpPanel = $state(false);
   let showChatPanel = $state(false);
   let showRepoImport = $state(false);
+  let showFactoryPanel = $derived(isOverlayActive("assembly"));
   /** @type {any[]} */
   let savedForts = $state([]);
 
@@ -83,6 +89,7 @@
 
     return () => {
       stopTelemetry();
+      stopFactory();
     };
   });
 
@@ -92,7 +99,6 @@
     if (["F", "T", "P", "D", "R", "C", "K", "A"].includes(key)) {
       e.preventDefault();
       toggleByShortcut(key);
-      // Sync telemetry polling to overlay state after toggle
       syncPollingToOverlays();
     }
     if (e.key === "Escape") {
@@ -115,8 +121,11 @@
       buildTargetFort = fort.activeFortId;
       showBuildTrigger = true;
     } else if (fort.zoomLevel === 1 && node.type === "room") {
-      if (isOverlayActive("assembly")) {
-        // Assembly overlay: zoom into build corridor
+      if (isOverlayActive("assembly") && fort.activeFortId === "dark_factory") {
+        // Dark factory fort: zoom into factory control room
+        zoomIntoFactoryControl(fort.activeFortId);
+      } else if (isOverlayActive("assembly")) {
+        // Other forts: zoom into build corridor
         zoomIntoBuildCorridor(fort.activeFortId);
       } else {
         zoomIntoRoom(node.id);
@@ -335,6 +344,11 @@
   fortId={buildTargetFort}
   onclose={() => { showBuildTrigger = false; }}
 />
+<FactoryPanel
+  open={showFactoryPanel}
+  onclose={() => { toggleByShortcut("A"); }}
+/>
+<FactoryConsole />
 
 <style>
   .editor {

@@ -34,4 +34,9 @@ export const DEFAULT_MCP_SERVERS = [
     name: "fleetprompt",
     label: "FleetPrompt Registry",
   },
+  {
+    url: "https://app.specprompt.com/mcp",
+    name: "specprompt",
+    label: "SpecPrompt Standards",
+  },
 ];
