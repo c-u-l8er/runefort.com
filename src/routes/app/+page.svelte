@@ -38,7 +38,7 @@
   import { getFort, loadDemoDistrict, zoomIntoFort, zoomIntoRoom, zoomIntoNode, zoomIntoRune, zoomIntoBuildCorridor, zoomIntoBuild, zoomIntoFactoryControl, zoomOut, loadSavedFort } from "$lib/stores/fort.svelte.js";
   import { fetchPipelineStatus, getPipelineData } from "$lib/stores/assembly.svelte.js";
   import { toggleByShortcut, getOverlays, isOverlayActive } from "$lib/stores/overlays.svelte.js";
-  import { getAuth, initAuth, openAuthModal, signOut } from "$lib/stores/auth.svelte.js";
+  import { getAuth, initAuth, openAuthModal } from "$lib/stores/auth.svelte.js";
   import { listForts, loadFort, deleteFort } from "$lib/persistence.js";
   import { initApiKey, setApiKey, hasApiKey } from "$lib/stores/apikey.svelte.js";
   import { autoConnect, connectedCount } from "$lib/stores/mcp.svelte.js";
@@ -238,9 +238,9 @@
         Save
       </button>
       {#if auth.user}
-        <button class="tool-btn user" onclick={signOut} title="Sign out">
+        <a href="/app/profile" class="tool-btn user" title="Profile">
           {auth.user.email?.charAt(0).toUpperCase() || "U"}
-        </button>
+        </a>
       {:else}
         <button class="tool-btn" onclick={openAuthModal} title="Sign in">
           Sign in
