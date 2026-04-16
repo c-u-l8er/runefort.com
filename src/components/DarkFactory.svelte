@@ -88,27 +88,72 @@
 
     <div class="dark-factory-split">
       <div class="df-card dark">
-        <h3>The dark factory</h3>
+        <h3>The dark factory (today)</h3>
         <ul>
           <li>Specs go in, tested software comes out</li>
           <li>No human writes or reviews code</li>
           <li>Holdout validation separates train/test</li>
-          <li>Graph-structured agent pipelines</li>
-          <li>Digital twin universes for integration</li>
-          <li>Production code shipping today</li>
+          <li>Spotify Honk ships 650+ PRs/month into production</li>
+          <li>StrongDM: 3 engineers, 32K LOC, zero code review</li>
+          <li>YAML DAGs orchestrate single-repo pipelines</li>
         </ul>
       </div>
       <div class="df-card lit">
-        <h3>RuneFort adds</h3>
+        <h3>RuneFort runs and renders it</h3>
         <ul>
-          <li><span class="rune-glyph">ᚲ</span> Spatial observability &mdash; walk through the pipeline</li>
-          <li><span class="rune-glyph">ᛏ</span> Governance walls &mdash; Delegatic policy enforcement</li>
-          <li><span class="rune-glyph">ᛉ</span> Diagnostic watchtowers &mdash; PRISM anomaly detection</li>
-          <li><span class="rune-glyph">ᚷ</span> Bridge visibility &mdash; see tokens cross system boundaries</li>
-          <li><span class="rune-glyph">ᚹ</span> Trust scoring &mdash; FleetPrompt reputation on every agent</li>
-          <li><span class="rune-glyph">ᛃ</span> Learning feedback &mdash; the fort improves with every cycle</li>
+          <li><span class="rune-glyph">ᛞ</span> <strong>Dark Factory loop</strong> &mdash; watches signals, triages, sequences SpecPrompt &rarr; Agentelic &rarr; FleetPrompt &rarr; deploy</li>
+          <li><span class="rune-glyph">ᚲ</span> <strong>Spatial observability</strong> &mdash; walk through the pipeline, not scroll a log</li>
+          <li><span class="rune-glyph">ᚱ</span> <strong>PULSE temporal algebra</strong> &mdash; phases + cadence + typed cross-loop tokens (no equivalent elsewhere)</li>
+          <li><span class="rune-glyph">ᚨ</span> <strong>&kappa;-aware routing</strong> &mdash; cyclic failure detection triggers deliberation</li>
+          <li><span class="rune-glyph">ᛉ</span> <strong>PRISM watchtowers</strong> &mdash; 9-dimension continual-learning evaluation</li>
+          <li><span class="rune-glyph">ᛃ</span> <strong>Graphonomous memory</strong> &mdash; factory learns across sessions, promotes reliable templates</li>
         </ul>
       </div>
+    </div>
+
+    <div class="orchestration-panel">
+      <div class="panel-label">RuneFort Dark Factory Orchestration Loop</div>
+      <div class="panel-flow">
+        <div class="flow-step">
+          <span class="flow-rune">ᚲ</span>
+          <span class="flow-kind">retrieve</span>
+          <span class="flow-name">watch_signals</span>
+          <span class="flow-detail">GitHub pushes &middot; Graphonomous outcomes &middot; issues</span>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <span class="flow-rune">ᚨ</span>
+          <span class="flow-kind">route</span>
+          <span class="flow-name">triage_classify</span>
+          <span class="flow-detail">heuristic classification + &kappa; topology check</span>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <span class="flow-rune">ᚠ</span>
+          <span class="flow-kind">act</span>
+          <span class="flow-name">pipeline_execute</span>
+          <span class="flow-detail">SpecPrompt &rarr; Agentelic &rarr; FleetPrompt &rarr; deploy gate</span>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <span class="flow-rune">ᛃ</span>
+          <span class="flow-kind">learn</span>
+          <span class="flow-name">learn_outcomes</span>
+          <span class="flow-detail">OutcomeSignal + ReputationUpdate CloudEvents</span>
+        </div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">
+          <span class="flow-rune">ᛞ</span>
+          <span class="flow-kind">consolidate</span>
+          <span class="flow-name">consolidate_patterns</span>
+          <span class="flow-detail">merge failure patterns &middot; promote templates</span>
+        </div>
+      </div>
+      <p class="panel-caption">
+        Five PULSE phases, running concurrently with <code>runefort.spatial_render</code>.
+        No LLM calls from RuneFort &mdash; pure heuristic triage + MCP sequencing.
+        Synthetic mode for demos, <strong>R!</strong> for real pipelines against live MCP servers.
+      </p>
     </div>
 
     <div class="b2b-visual">
@@ -253,5 +298,108 @@
   }
   .b2b-note strong {
     color: var(--text);
+  }
+
+  /* Dark factory orchestration loop visualization */
+  .orchestration-panel {
+    margin: 2.5rem 0;
+    padding: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    position: relative;
+  }
+  .orchestration-panel::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--amber), var(--rune));
+  }
+  .panel-label {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: var(--amber);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+  .panel-flow {
+    display: grid;
+    grid-template-columns: repeat(9, auto);
+    grid-template-areas: "s1 a1 s2 a2 s3 a3 s4 a4 s5";
+    gap: 0.5rem;
+    align-items: stretch;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
+  @media (max-width: 900px) {
+    .panel-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .flow-arrow { display: none; }
+  }
+  .flow-step {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    min-width: 150px;
+  }
+  .flow-rune {
+    font-family: "Noto Sans Runic", serif;
+    font-size: 1.2rem;
+    color: var(--rune);
+    line-height: 1;
+  }
+  .flow-kind {
+    font-family: var(--mono);
+    font-size: 0.55rem;
+    font-weight: 700;
+    color: var(--amber);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .flow-name {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .flow-detail {
+    font-size: 0.65rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .flow-arrow {
+    color: var(--muted);
+    font-size: 1.1rem;
+    align-self: center;
+    justify-self: center;
+  }
+  .panel-caption {
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: var(--dim);
+    line-height: 1.5;
+  }
+  .panel-caption code {
+    background: var(--surface-2);
+    color: var(--amber);
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+  }
+  .panel-caption strong {
+    color: var(--amber);
+    font-family: var(--mono);
   }
 </style>

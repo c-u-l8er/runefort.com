@@ -3,7 +3,9 @@
     <h1>Walk through your<br /><em>autonomous workflows</em></h1>
     <p class="subline">
         Dark factories run with the lights off. RuneFort turns them back on
-        &mdash; not with dashboards, but with a place you can walk through.
+        &mdash; and now <em class="accent">runs the factory itself</em>. A PULSE-native
+        orchestration loop watches signals, triages, and sequences SpecPrompt &rarr;
+        Agentelic &rarr; FleetPrompt &rarr; deploy &mdash; all visible as a place you can walk through.
     </p>
     <div class="cta-row">
         <a href="/app" class="btn btn-primary">Try the Editor</a>
@@ -47,6 +49,11 @@
     .hero h1 em {
         font-style: normal;
         color: var(--amber);
+    }
+    .subline .accent {
+        font-style: normal;
+        color: var(--amber);
+        font-weight: 500;
     }
     .subline {
         font-size: 1.15rem;

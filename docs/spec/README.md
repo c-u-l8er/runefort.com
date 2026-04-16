@@ -24,8 +24,13 @@ RuneFort is a spatial visualization and navigation system for AI operating syste
 | MemGPT/Letta | LLM self-manages tiered memory | RuneFort makes those tiers visible and walkable |
 | MemOS | Memory infrastructure containers | RuneFort is the building those containers live in |
 | EverMemOS | Self-organizing episodic→semantic | RuneFort shows the reorganization happening |
+| **GitHub Agent HQ "Mission Control"** | Multi-vendor agent dashboard over issues/PRs | RuneFort is spatial (walk the pipeline) vs flat lists |
+| **Cole Medin's Archon (YAML)** | DAG workflow engine for single-repo AI coding | RuneFort uses PULSE (temporal algebra, cyclic, typed tokens) across N forts |
+| **StrongDM Software Factory** | Closed 3-person L5 shop shipping production Rust/Go | RuneFort is the open visualization layer; StrongDM factory is spec'd via PULSE manifest |
+| **Cursor 3 Cloud Agents** | 8-parallel agents per repo in IDE sidebar | RuneFort orchestrates cross-product ecosystem, not per-repo |
+| **Temporal.io + Zep/Graphiti** | Durable workflows + bi-temporal KG memory | RuneFort + Graphonomous add κ-aware routing + goal coverage gates |
 
-RuneFort does not replace any of these. It renders them. Any system that declares a PULSE loop manifest gets a fort.
+RuneFort does not replace any of these. It renders them. Any system that declares a PULSE loop manifest gets a fort. And any fort can be orchestrated by the `runefort.dark_factory` loop if it exposes Agentelic/FleetPrompt/SpecPrompt MCP endpoints.
 
 ### 1.2 Three-Protocol Integration
 
@@ -771,6 +776,94 @@ RuneFort does NOT:
 - Room growth/shrinkage
 - Wall dynamics
 - Layout optimization from usage patterns
+
+### Phase 6.1: Dark Factory Orchestration Loop (`runefort.dark_factory`)
+
+RuneFort is no longer only the **observer** of external pipelines — it now runs a **second PULSE loop** (`runefort.dark_factory`) that actively orchestrates the SpecPrompt → Agentelic → FleetPrompt conveyor belt. This complements `runefort.spatial_render` (which renders the fort UI). Both loops run concurrently.
+
+**Architecture — active orchestration, not passive display:**
+
+The dark factory loop turns RuneFort's existing MCP clients (Agentelic, FleetPrompt, SpecPrompt) from passive readers into **act primitives** that a state machine sequences. No LLM calls are made inside RuneFort — heuristic triage + MCP sequencing only.
+
+```
+src/lib/stores/factory.svelte.js        — Svelte 5 rune store; state machine for
+                                           signal queue + pipeline runs
+src/lib/play/factory-loop.js            — MCP call sequences per phase
+                                           (watch/triage/pipeline/learn/consolidate)
+src/lib/play/cloudevents.js             — CloudEvents v1 envelope builders for
+                                           PULSE cross-loop tokens
+src/lib/play/specprompt-client.js       — SpecPrompt MCP wrapper
+                                           (validate/lint/diff — content-based)
+src/lib/stores/factorylog.svelte.js     — Append-only log ring (200 entries)
+src/components/app/FactoryPanel.svelte  — Active control panel (signal queue,
+                                           runs, controls, MCP status chips)
+src/components/app/FactoryConsole.svelte — Bottom-docked log console
+                                           (collapsible, 8-level filter)
+src/components/flow/ConveyorNode.svelte — L2 pipeline stage tile
+```
+
+**Five phases of `runefort.dark_factory`:**
+
+| Phase | Kind | What it does | MCP calls |
+|-------|------|--------------|-----------|
+| `watch_signals` | `retrieve` | Poll GitHub commits + Graphonomous outcome nodes + issues every `watchIntervalMs` (default 60s) | `graphonomous.retrieve(context, "outcome_signal status:failure")`, GitHub API |
+| `triage_classify` | `route` | Heuristic path/label classification → `spec_change` / `code_change` / `bug_report` / `regression`. Kappa topology check on failure patterns. No LLM calls — pure rules. | `graphonomous.route(topology, ...)` for κ check |
+| `pipeline_execute` | `act` | Sequential 4-stage conveyor: spec_lifecycle → build_pipeline → trust_scoring → deploy_gate. Each phase transitions the run's `stage` field and logs `PHS ▶` on start and `PHS ✓` on success. | `specprompt.validate(content)`, `agentelic.agent_ensure(slug, ws, user)`, `agentelic.agent_build(uuid, content)`, `agentelic.agent_status(uuid)` polling loop (5s × 60), `fleetprompt.registry_trust(id)` |
+| `learn_outcomes` | `learn` | Feed run outcome back to Graphonomous as outcome/semantic nodes. Emit `OutcomeSignal` + `ReputationUpdate` CloudEvents. | `graphonomous.act(store_node, outcome)`, `graphonomous.learn(from_outcome, status)` |
+| `consolidate_patterns` | `consolidate` | Trigger Graphonomous consolidation; merge duplicate failure patterns; promote repeated-success templates. Emit `ConsolidationEvent`. | `graphonomous.consolidate(run)`, `graphonomous.retrieve(context, "factory failure patterns")` |
+
+**Pipeline state machine:**
+
+```
+signal ingested → pending → triaged → processing → run stage:
+  spec_update → build → trust → deploy
+                                   ↓
+  trust_score >= threshold? ─ yes → complete (auto-deploy)
+                             ─ no  → needs_approval (flag human)
+                                   ↓
+  LEARN phase fires (even on failure)
+                                   ↓
+  OutcomeSignal + ReputationUpdate emitted as CloudEvents v1
+                                   ↓
+  completedRuns[] (ring buffer, 50 entries)
+```
+
+**Triage heuristic (zero LLM calls):**
+
+| Signal pattern | Classification | Confidence |
+|---|---|---|
+| Git push modifies `docs/spec/` or `SPEC.md` | `spec_change` | 0.95 |
+| Git push modifies `src/` or `lib/` | `code_change` | 0.85 |
+| Commit message contains `fix`/`bug` | `bug_report` | 0.75 |
+| GitHub issue with label `regression` | `regression` | 0.95 |
+| GitHub issue with label `bug` | `bug_report` | 0.90 |
+| Graphonomous outcome with `status: failure` | `regression` | 0.90 |
+| κ > 0 on failure patterns | `regression` (cyclic) | 0.85 |
+| Confidence < 0.7 | Push to chat for agent classification | — |
+
+**Synthetic fallback (demo mode):**
+
+`factory.svelte.js::runSyntheticPipeline()` emulates the full pipeline with `setTimeout` delays when MCP servers are disconnected. The Factory Panel has separate `R` (synthetic) and `R!` (real) buttons — `R!` calls the actual MCP chain and requires active `specprompt` + `agentelic` + `fleetprompt` connections. MCP connection status is shown as colored chips in the panel header (✓ connected / ✗ error / … connecting / — missing).
+
+**Factory Console (bottom-docked):**
+
+A collapsible log console at the bottom of the editor captures all loop activity with 8 levels: `SIG` (signals ingested), `TRI` (triage), `PIP` (pipeline lifecycle), `PHS` (per-phase start/success/fail), `LRN` (learn), `CON` (consolidate), `ERR` (errors), `INF` (info). Each entry has a timestamp, level badge, and optional expandable JSON detail. Ring buffer holds 200 entries; filters + auto-scroll + clear button in header.
+
+**PULSE Loop Manifest:** `static/runefort.dark_factory.pulse.json`
+
+Connects to:
+- **consumes** `OutcomeSignal` from `graphonomous.memory_loop::learn_outcome` (triggers regression triage)
+- **consumes** `TopologyContext` from `graphonomous.memory_loop::route_topology` (κ-aware routing)
+- **emits** `OutcomeSignal` to `graphonomous.memory_loop` (outcome learning)
+- **emits** `ReputationUpdate` to `fleetprompt.marketplace` (trust recalibration)
+- **emits** `ConsolidationEvent` to `runefort.spatial_render` (factory UI updates)
+
+**Autonomy positioning (Dan Shapiro scale):**
+
+- Without `R!`: L4 (spec-driven, human approves each run) — matches Cole's Archon
+- With `R!` + trust threshold auto-deploy: **L5 (specs in, software out)** — matches StrongDM/Spotify Honk
+
+---
 
 ### Phase 6: Dark Factory Control Room
 - **Pipeline overlay** — new overlay key `A` (Assembly): shows the dark factory pipeline status for each product fort
