@@ -2,6 +2,15 @@ import { generateFortFromManifest, generateBuildCorridor, generateTestRoom, gene
 import { getPipelineData } from "$lib/stores/assembly.svelte.js";
 import { getFactoryState } from "$lib/stores/factory.svelte.js";
 import { trackNavigation } from "$lib/play/session-learning.js";
+import { applyPositionOverrides, savePosition } from "$lib/play/positionStorage.js";
+
+/** The fort id used to key localStorage position overrides for a given zoom. */
+function positionScope() {
+  if (fort.zoomLevel === 0) return "district";
+  if (fort.activeRoomId) return `${fort.activeFortId}:${fort.activeRoomId}`;
+  if (fort.activeNodeId) return `${fort.activeFortId}:${fort.activeNodeId}`;
+  return fort.activeFortId || "_root";
+}
 
 /**
  * Registry of imported forts (repo imports, etc.) that persist across zoom levels.
@@ -108,6 +117,7 @@ export function loadDemoDistrict() {
   fort.activeFortId = "";
   fort.activeRoomId = null;
   fort.activeNodeId = null;
+  applyPositionOverrides(district.nodes, positionScope(), 0);
   fort.nodes = district.nodes;
   fort.edges = district.edges;
   fort.manifest = null;
@@ -126,6 +136,7 @@ export function zoomIntoFort(fortId) {
     fort.activeFortId = fortId;
     fort.activeRoomId = null;
     fort.activeNodeId = null;
+    applyPositionOverrides(imported.nodes, positionScope(), 1);
     fort.nodes = imported.nodes;
     fort.edges = imported.edges;
     fort.manifest = imported.manifest;
@@ -141,6 +152,7 @@ export function zoomIntoFort(fortId) {
   fort.activeFortId = fortId;
   fort.activeRoomId = null;
   fort.activeNodeId = null;
+  applyPositionOverrides(campus.nodes, positionScope(), 1);
   fort.nodes = campus.nodes;
   fort.edges = campus.edges;
   fort.manifest = manifest;
@@ -154,6 +166,7 @@ export function zoomIntoRoom(roomId) {
   fort.zoomLevel = 2;
   fort.activeRoomId = roomId;
   fort.activeNodeId = null;
+  applyPositionOverrides(wing.nodes, positionScope(), 2);
   fort.nodes = wing.nodes;
   fort.edges = wing.edges;
   fort.dirty = true;
@@ -165,6 +178,7 @@ export function zoomIntoNode(roomId) {
   const room = generateFortFromManifest("room", fort.manifest, roomId);
   fort.zoomLevel = 3;
   fort.activeNodeId = roomId;
+  applyPositionOverrides(room.nodes, positionScope(), 3);
   fort.nodes = room.nodes;
   fort.edges = room.edges;
   fort.dirty = true;
@@ -175,6 +189,7 @@ export function zoomIntoNode(roomId) {
 export function zoomIntoRune(nodeId) {
   const rune = generateFortFromManifest("rune", fort.manifest, nodeId);
   fort.zoomLevel = 4;
+  applyPositionOverrides(rune.nodes, positionScope(), 4);
   fort.nodes = rune.nodes;
   fort.edges = rune.edges;
   fort.dirty = true;
@@ -188,6 +203,7 @@ export function zoomIntoFactoryControl(fortId) {
   fort.activeRoomId = `factory-${fortId}`;
   fort.activeNodeId = null;
   fort.activeBuildId = null;
+  applyPositionOverrides(room.nodes, positionScope(), 2);
   fort.nodes = room.nodes;
   fort.edges = room.edges;
   fort.dirty = true;
@@ -203,6 +219,7 @@ export function zoomIntoBuildCorridor(fortId) {
   fort.activeRoomId = `corridor-${fortId}`;
   fort.activeNodeId = null;
   fort.activeBuildId = null;
+  applyPositionOverrides(corridor.nodes, positionScope(), 2);
   fort.nodes = corridor.nodes;
   fort.edges = corridor.edges;
   fort.dirty = true;
@@ -218,6 +235,7 @@ export function zoomIntoBuild(buildId, fortId) {
   fort.zoomLevel = 3;
   fort.activeNodeId = buildId;
   fort.activeBuildId = buildId;
+  applyPositionOverrides(room.nodes, positionScope(), 3);
   fort.nodes = room.nodes;
   fort.edges = room.edges;
   fort.dirty = true;
@@ -299,6 +317,7 @@ export function loadImportedFort(nodes, edges, name, manifest = null) {
   fort.activeFortId = `imported-${name}`;
   fort.activeRoomId = null;
   fort.activeNodeId = null;
+  applyPositionOverrides(nodes, positionScope(), 1);
   fort.nodes = nodes;
   fort.edges = edges;
   fort.manifest = manifest;
@@ -310,4 +329,24 @@ export function loadImportedFort(nodes, edges, name, manifest = null) {
 /** Get count of imported forts */
 export function getImportedFortCount() {
   return _importedForts.size;
+}
+
+/**
+ * Persist a user-dragged position. Updates the reactive nodes array (which is
+ * $state.raw, so we reassign with a fresh array) and writes the new position
+ * to localStorage keyed by (fort scope, zoom level). Also marks the node
+ * `_pinned` so the next lattice re-layout leaves it where the user put it.
+ *
+ * @param {string} nodeId
+ * @param {{ x:number, y:number }} pos
+ */
+export function setNodePosition(nodeId, pos) {
+  const next = fort.nodes.map((n) =>
+    n.id === nodeId
+      ? { ...n, position: { x: pos.x, y: pos.y }, data: { ...(n.data || {}), _pinned: true } }
+      : n
+  );
+  fort.nodes = next;
+  savePosition(positionScope(), fort.zoomLevel, nodeId, pos);
+  fort.dirty = true;
 }

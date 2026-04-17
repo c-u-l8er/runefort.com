@@ -22,7 +22,12 @@
 /** @typedef {{ id: string, type?: string, position?: { x: number, y: number }, data?: any }} LatticeNode */
 /** @typedef {{ id: string, source: string, target: string, sourceHandle?: string, targetHandle?: string, [k: string]: any }} LatticeEdge */
 
-export const CELL = /** @type {const} */ ({ w: 260, h: 200 });
+// Cell size is tuned for the largest tile we place (room / tile / fort are all
+// around 240 × 115). `w: 320` leaves ~80 px horizontal breathing room between
+// neighbouring tiles so smoothstep edges have space to route their step, and
+// `h: 240` leaves ~125 px vertical gap so goal seeds / walls never overlap
+// the main row.
+export const CELL = /** @type {const} */ ({ w: 320, h: 240 });
 
 /** PULSE phase kinds → canonical column order (spec §6.2). Unknown = 99. */
 const KIND_COL = {
@@ -263,9 +268,12 @@ export function autoWireHandles(nodes, edges) {
   const posById = new Map();
   /** @type {Map<string, string|undefined>} */
   const typeById = new Map();
+  /** @type {Map<string, {w:number,h:number}>} */
+  const dimById = new Map();
   for (const n of nodes) {
     if (n.position) posById.set(n.id, n.position);
     typeById.set(n.id, n.type);
+    dimById.set(n.id, dimensionsFor(n));
   }
 
   // FortNode is the only stock type with paired source/target handles per
@@ -299,20 +307,132 @@ export function autoWireHandles(nodes, edges) {
     const s = posById.get(e.source);
     const t = posById.get(e.target);
     if (!s || !t) continue;
-    const dx = t.x - s.x;
-    const dy = t.y - s.y;
+    const sd = dimById.get(e.source) ?? { w: 160, h: 95 };
+    const td = dimById.get(e.target) ?? { w: 160, h: 95 };
+    // Use tile centers so obstacle checks are symmetric regardless of which
+    // corner SvelteFlow treats as `position`.
+    const sc = { x: s.x + sd.w / 2, y: s.y + sd.h / 2 };
+    const tc = { x: t.x + td.w / 2, y: t.y + td.h / 2 };
+    const dx = tc.x - sc.x;
+    const dy = tc.y - sc.y;
     /** @type {"top"|"bottom"|"left"|"right"} */
     let sourceSide;
     /** @type {"top"|"bottom"|"left"|"right"} */
     let targetSide;
-    if (Math.abs(dx) >= Math.abs(dy)) {
+    const horizontalDominant = Math.abs(dx) >= Math.abs(dy);
+
+    // If a same-row neighbour sits between us and the target, a straight
+    // left/right run would cut through it. Flip to top/bottom handles so
+    // the smoothstep edge routes around instead of through. Mirrored for
+    // vertical-dominant edges with a same-column obstacle.
+    const obstruction = findObstruction(
+      e.source, e.target, sc, tc, posById, dimById, horizontalDominant,
+    );
+
+    if (horizontalDominant && !obstruction) {
       sourceSide = dx >= 0 ? "right"  : "left";
       targetSide = dx >= 0 ? "left"   : "right";
-    } else {
+    } else if (horizontalDominant && obstruction) {
+      // Route above if target sits higher OR tied (default upward arc looks
+      // better than dipping below the row). Otherwise route below.
+      const above = tc.y <= sc.y;
+      sourceSide = above ? "top"    : "bottom";
+      targetSide = above ? "bottom" : "top";
+    } else if (!horizontalDominant && !obstruction) {
       sourceSide = dy >= 0 ? "bottom" : "top";
       targetSide = dy >= 0 ? "top"    : "bottom";
+    } else {
+      // Vertical-dominant with a column obstruction → detour sideways.
+      const rightward = tc.x >= sc.x;
+      sourceSide = rightward ? "right" : "left";
+      targetSide = rightward ? "left"  : "right";
     }
+
     e.sourceHandle = handleId(typeById.get(e.source), sourceSide, "source");
     e.targetHandle = handleId(typeById.get(e.target), targetSide, "target");
   }
+}
+
+/**
+ * Default dimensions by node type. Kept in sync with `DEFAULT_DIMS` in
+ * `nodeGeometry.js` — duplicated here to avoid a cross-module import cycle
+ * (nodeGeometry imports layout helpers elsewhere). Missing types fall back
+ * to a generic tile size.
+ * @type {Record<string, { w:number, h:number }>}
+ */
+const LAYOUT_DIMS = {
+  room: { w: 240, h: 115 },
+  wall: { w: 100, h: 54 },
+  clocktower: { w: 140, h: 109 },
+  goalseed: { w: 112, h: 107 },
+  fort: { w: 150, h: 105 },
+  tile: { w: 240, h: 86 },
+  hall: { w: 120, h: 60 },
+  bridge: { w: 120, h: 70 },
+  gate: { w: 120, h: 60 },
+  tower: { w: 120, h: 110 },
+  rune: { w: 280, h: 120 },
+  buildtile: { w: 160, h: 90 },
+  testtile: { w: 140, h: 70 },
+  district: { w: 180, h: 100 },
+  conveyor: { w: 120, h: 60 },
+  b2bopaque: { w: 180, h: 120 },
+  b2bphase: { w: 130, h: 80 },
+  b2bgroup: { w: 160, h: 90 },
+};
+
+/** @param {LatticeNode} n */
+function dimensionsFor(n) {
+  return LAYOUT_DIMS[n.type ?? ""] ?? { w: 240, h: 115 };
+}
+
+/**
+ * True when any non-endpoint node's bounding box intersects the rectangular
+ * corridor between source and target centers. For horizontal-dominant edges
+ * the corridor is a narrow horizontal band (height = ~tile/2); for vertical
+ * edges it is a narrow vertical band (width = ~tile/2). Endpoints themselves
+ * are excluded. This is a heuristic — cheap O(n) per edge and good enough to
+ * fix the common "tile sitting on top of the line" case in a dense row.
+ *
+ * @param {string} sourceId
+ * @param {string} targetId
+ * @param {{x:number,y:number}} sc source center
+ * @param {{x:number,y:number}} tc target center
+ * @param {Map<string,{x:number,y:number}>} posById positions (top-left corner)
+ * @param {Map<string,{w:number,h:number}>} dimById sizes
+ * @param {boolean} horizontal whether the edge runs mostly left→right
+ */
+function findObstruction(sourceId, targetId, sc, tc, posById, dimById, horizontal) {
+  const x0 = Math.min(sc.x, tc.x);
+  const x1 = Math.max(sc.x, tc.x);
+  const y0 = Math.min(sc.y, tc.y);
+  const y1 = Math.max(sc.y, tc.y);
+  // How close to the line does another node need to be to count as "in the way"?
+  // Half a tile height/width is a reasonable threshold — comparable with what
+  // the user perceives as "the line goes through the tile".
+  const vBand = horizontal ? 50 : 0; // ± 50px vertical tolerance around the row
+  const hBand = horizontal ? 0 : 50; // ± 50px horizontal tolerance around the column
+
+  for (const [id, pos] of posById) {
+    if (id === sourceId || id === targetId) continue;
+    const dim = dimById.get(id) ?? { w: 160, h: 95 };
+    const nx0 = pos.x;
+    const nx1 = pos.x + dim.w;
+    const ny0 = pos.y;
+    const ny1 = pos.y + dim.h;
+    if (horizontal) {
+      // Edge runs along y ≈ average of sc.y / tc.y. Node must overlap that
+      // horizontal band AND sit between the two endpoints horizontally.
+      const lineY = (sc.y + tc.y) / 2;
+      if (ny1 < lineY - vBand || ny0 > lineY + vBand) continue;
+      if (nx1 < x0 || nx0 > x1) continue;
+      return id;
+    } else {
+      const lineX = (sc.x + tc.x) / 2;
+      if (nx1 < lineX - hBand || nx0 > lineX + hBand) continue;
+      if (ny1 < y0 || ny0 > y1) continue;
+      return id;
+    }
+  }
+  return null;
 }

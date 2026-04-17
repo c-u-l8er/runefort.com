@@ -11,6 +11,7 @@ import { getStarterManifest } from "./builtins.js";
 import { getFort } from "$lib/stores/fort.svelte.js";
 import { layoutCampus } from "./latticeLayout.js";
 import { seedNodeGeometry } from "./nodeGeometry.js";
+import { applyPositionOverrides } from "./positionStorage.js";
 
 /** @type {ReturnType<typeof setInterval>|null} */
 let _pulseInterval = null;
@@ -133,6 +134,7 @@ export async function loadStarterFort() {
   fort.activeFortId = "starter";
   fort.activeRoomId = null;
   fort.activeNodeId = null;
+  applyPositionOverrides(nodes, "starter", 1);
   fort.nodes = nodes;
   fort.edges = edges;
   fort.manifest = manifest;

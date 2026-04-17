@@ -177,7 +177,9 @@
 
   /* Svelte Flow dark theme overrides */
   .zoom-canvas :global(.svelte-flow) {
+    background-color: var(--surface);
     --xy-background-color: var(--surface);
+    --xy-background-color-default: var(--surface);
     --xy-node-border-radius: 8px;
     --xy-edge-stroke: var(--dim);
     --xy-edge-stroke-selected: var(--amber);

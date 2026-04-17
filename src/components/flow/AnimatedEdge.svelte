@@ -1,5 +1,5 @@
 <script>
-  import { BaseEdge, getBezierPath } from "@xyflow/svelte";
+  import { BaseEdge, getSmoothStepPath } from "@xyflow/svelte";
   import { getFlows } from "$lib/stores/tokenflow.svelte.js";
 
   let {
@@ -22,14 +22,18 @@
 
   const flows = getFlows();
 
+  // Smoothstep = orthogonal segments with rounded corners. Much less likely
+  // to cross through unrelated tiles than the previous bezier because the
+  // path hugs the source side first, then runs along one axis to the target.
   let [edgePath, labelX, labelY] = $derived(
-    getBezierPath({
+    getSmoothStepPath({
       sourceX,
       sourceY,
       targetX,
       targetY,
       sourcePosition,
       targetPosition,
+      borderRadius: 8,
     }),
   );
 
@@ -43,21 +47,33 @@
   let particles = $state([]);
   let rafId = $state(null);
 
-  // Interpolate a point along a cubic bezier by sampling the SVG path
-  function getPointAtProgress(progress) {
-    // Lerp along the bezier using control point approximation
-    const t = progress;
-    // Simple quadratic bezier interpolation between source and target
-    // with a control point offset for curvature
-    const midX = (sourceX + targetX) / 2;
-    const midY = (sourceY + targetY) / 2;
-    const cpX = midX;
-    const cpY = sourceY; // control point at source height for downward curve feel
+  // A hidden path element bound below gives us getTotalLength/getPointAtLength
+  // so particles follow the *actual* smoothstep route instead of a straight
+  // chord. Reinitialized whenever `edgePath` changes.
+  /** @type {SVGPathElement | null} */
+  let measurePath = $state(null);
+  let pathLength = $derived.by(() => {
+    if (!measurePath) return 0;
+    // Re-read whenever edgePath changes so the getter stays reactive.
+    void edgePath;
+    try { return measurePath.getTotalLength(); } catch { return 0; }
+  });
 
-    const u = 1 - t;
-    const x = u * u * sourceX + 2 * u * t * cpX + t * t * targetX;
-    const y = u * u * sourceY + 2 * u * t * cpY + t * t * targetY;
-    return { x, y };
+  function getPointAtProgress(progress) {
+    if (measurePath && pathLength > 0) {
+      try {
+        const p = measurePath.getPointAtLength(progress * pathLength);
+        return { x: p.x, y: p.y };
+      } catch {
+        // fall through to straight-line fallback
+      }
+    }
+    // Fallback: linear interpolation between endpoints if the path ref isn't
+    // ready yet (first paint before the hidden <path> has mounted).
+    return {
+      x: sourceX + (targetX - sourceX) * progress,
+      y: sourceY + (targetY - sourceY) * progress,
+    };
   }
 
   $effect(() => {
@@ -122,6 +138,17 @@
     </feMerge>
   </filter>
 </defs>
+
+<!-- Hidden geometry-only copy of the edge path. Lets us sample real points
+     along the smoothstep route for particle animation without affecting the
+     visible BaseEdge render. -->
+<path
+  bind:this={measurePath}
+  d={edgePath}
+  fill="none"
+  stroke="none"
+  style="pointer-events: none;"
+/>
 
 {#if isActive}
   <!-- Active edge: colored stroke -->

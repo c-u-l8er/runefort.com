@@ -441,7 +441,9 @@
         background: var(--surface);
     }
     .b2b-canvas :global(.svelte-flow) {
+        background-color: var(--surface);
         --xy-background-color: var(--surface);
+        --xy-background-color-default: var(--surface);
         --xy-edge-stroke: var(--dim);
         --xy-edge-stroke-width: 2;
         --xy-edge-label-color: var(--rune);

@@ -64,8 +64,8 @@
     border: 1px solid;
     border-radius: 8px;
     padding: 0.75rem 1rem;
-    min-width: 240px;
-    max-width: 300px;
+    width: 240px;
+    box-sizing: border-box;
     transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
   }
   .tile-header {

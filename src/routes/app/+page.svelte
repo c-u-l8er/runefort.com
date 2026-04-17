@@ -45,9 +45,10 @@
   import ToastHost from "../../components/app/ToastHost.svelte";
 
   // Stores
-  import { getFort, loadDemoDistrict, zoomIntoFort, zoomIntoRoom, zoomIntoNode, zoomIntoRune, zoomIntoBuildCorridor, zoomIntoBuild, zoomIntoFactoryControl, zoomOut, loadSavedFort } from "$lib/stores/fort.svelte.js";
+  import { getFort, loadDemoDistrict, zoomIntoFort, zoomIntoRoom, zoomIntoNode, zoomIntoRune, zoomIntoBuildCorridor, zoomIntoBuild, zoomIntoFactoryControl, zoomOut, loadSavedFort, setNodePosition } from "$lib/stores/fort.svelte.js";
   import { loadStarterFort, stopSyntheticPulses } from "$lib/play/starterFort.js";
   import { startLivingFort, stopLivingFort } from "$lib/play/livingFort.js";
+  import { startMeasuringNodes, stopMeasuring } from "$lib/play/measureNodes.js";
   import { fetchPipelineStatus, getPipelineData } from "$lib/stores/assembly.svelte.js";
   import { toggleByShortcut, getOverlays, isOverlayActive, clearAllLocalOverlays, getLocalActive, observeProximity, stopProximityTracker, getProximityHudState, PROXIMITY_THRESHOLD_RATIO } from "$lib/stores/overlays.svelte.js";
   import { getAuth, initAuth, openAuthModal } from "$lib/stores/auth.svelte.js";
@@ -130,6 +131,13 @@
     // Spec §6.1 — start the Living Fort synthetic driver so the fort visibly
     // breathes even when no MCP telemetry is connected.
     startLivingFort();
+    // Sync real DOM dimensions back into the store so seeded `measured` and
+    // `handles` arrays match what SvelteFlow's own ResizeObserver would produce.
+    // With corrected handle-coord math in nodeGeometry.js, re-adoption is idempotent.
+    startMeasuringNodes({
+      get: () => fort.nodes,
+      setNodes: (n) => { fort.nodes = n; },
+    });
     // Workspaces are now initialized from auth.svelte.js on auth state change
     // (including INITIAL_SESSION hydration), so no eager call is needed here.
 
@@ -138,6 +146,7 @@
       stopFactory();
       stopSyntheticPulses();
       stopLivingFort();
+      stopMeasuring();
       stopProximityTracker();
     };
   });
@@ -246,6 +255,21 @@
     } else if (fort.zoomLevel === 3 && node.type === "tile") {
       zoomIntoRune(node.id);
     }
+  }
+
+  /**
+   * Persist a user-dragged tile position. SvelteFlow fires this after the
+   * pointer is released. Writing to the fort store marks the node `_pinned`
+   * so lattice auto-layout respects the manual placement on next zoom/reload,
+   * and saves to localStorage so it survives a page refresh.
+   *
+   * @param {any} event — SvelteFlow passes { node } (with .position already
+   *   snapped by snapGrid) plus the raw pointer event.
+   */
+  function handleNodeDragStop(event) {
+    const node = event?.targetNode ?? event?.node ?? event?.detail?.node;
+    if (!node || !node.position) return;
+    setNodePosition(node.id, node.position);
   }
 
   async function loadBlueprintList() {
@@ -381,6 +405,9 @@
       defaultEdgeOptions={{ animated: false, style: getEdgeStyle() }}
       onnodeclick={handleNodeClick}
       onmove={handleViewportChange}
+      onnodedragstop={handleNodeDragStop}
+      snapToGrid={true}
+      snapGrid={[20, 20]}
       minZoom={0.1}
       maxZoom={4}
     >

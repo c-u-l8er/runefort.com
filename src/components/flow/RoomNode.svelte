@@ -139,7 +139,9 @@
     border: 1px solid;
     border-radius: 8px;
     padding: 0.75rem 1rem;
-    min-width: 160px;
+    width: 240px;
+    min-height: 115px;
+    box-sizing: border-box;
     position: relative;
     transition: background 0.3s, border-color 0.3s, box-shadow 0.3s,
                 transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
