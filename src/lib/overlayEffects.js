@@ -189,6 +189,44 @@ export function assemblyTrustGlow(trustScore = 0) {
 }
 
 /**
+ * Consolidation events — spec §6.2 Phase 5. Maps a consolidation event
+ * kind to the class applied for its animation lifetime. Keyframes are
+ * defined globally in `src/app.css` (`@keyframes decay-sweep`, etc.).
+ *
+ * @typedef {'decay'|'prune'|'merge'|'strengthen'|'promote'|'abstract'} ConsolidationEvent
+ */
+
+/** @type {Record<ConsolidationEvent, string>} */
+const CONSOLIDATION_CLASS = {
+  decay: "consolidate-decay",
+  prune: "consolidate-prune",
+  merge: "consolidate-merge",
+  strengthen: "consolidate-strengthen",
+  promote: "consolidate-promote",
+  abstract: "consolidate-abstract",
+};
+
+/** @type {Record<ConsolidationEvent, number>} animation duration in ms */
+export const CONSOLIDATION_DURATION = {
+  decay: 1100,
+  prune: 900,
+  merge: 1200,
+  strengthen: 1400,
+  promote: 1000,
+  abstract: 1300,
+};
+
+/**
+ * Returns the class name for a consolidation event, or empty string.
+ * @param {ConsolidationEvent | undefined | null} event
+ * @returns {string}
+ */
+export function consolidationClass(event) {
+  if (!event) return "";
+  return CONSOLIDATION_CLASS[event] || "";
+}
+
+/**
  * Assembly overlay: build tile color by status.
  * @param {string} status - succeeded|failed|pending|running
  * @returns {{ bg: string, border: string }}

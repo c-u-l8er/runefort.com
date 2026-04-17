@@ -141,6 +141,7 @@ export const L4 = {
   ],
 };
 
+/** @type {Array<{ nodes: any[], edges: any[] }>} */
 export const flowData = [L0, L1, L2, L3, L4];
 
 // ── JSON panels (same data as old index.html) ──

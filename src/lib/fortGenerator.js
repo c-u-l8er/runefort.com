@@ -3,6 +3,9 @@
  * at each of the 5 zoom levels (L0 District → L4 Rune).
  */
 
+import { layoutCampus, layoutDistrict } from "./play/latticeLayout.js";
+import { seedAllGeometry } from "./play/nodeGeometry.js";
+
 // ── Rune mappings ──
 const PHASE_RUNES = {
   retrieve: "ᚲ", route: "ᚨ", act: "ᚠ", learn: "ᛃ", consolidate: "ᛞ",
@@ -47,11 +50,26 @@ export const DEMO_MANIFESTS = {
     phases: [
       { id: "retrieve_context", kind: "retrieve", timeout_ms: 5000 },
       { id: "route_topology", kind: "route", timeout_ms: 1000 },
-      { id: "act_mutate", kind: "act", timeout_ms: 3000 },
+      // Nested loop (spec §3.3) — when κ > 0, routing escalates into the
+      // Deliberatic argumentation fort. Outer phase pauses until_done.
+      { id: "act_mutate", kind: "act", timeout_ms: 3000, nested_fort: "deliberatic" },
       { id: "learn_outcome", kind: "learn", timeout_ms: 2000 },
       { id: "consolidate_idle", kind: "consolidate", timeout_ms: 30000 },
     ],
     hasKappaGate: true,
+  },
+  deliberatic: {
+    loop_id: "deliberatic.argumentation",
+    label: "Deliberatic", rune: "ᚱ", color: "#e85a5a",
+    role: "Decision Protocol", schema: "(in-memory)",
+    phases: [
+      { id: "open_round", kind: "retrieve", timeout_ms: 3000 },
+      { id: "submit_positions", kind: "route", timeout_ms: 2000 },
+      { id: "compute_semantics", kind: "deliberate", timeout_ms: 1500 },
+      { id: "commit_verdict", kind: "act", timeout_ms: 1000 },
+      { id: "learn_calibration", kind: "learn", timeout_ms: 2000 },
+    ],
+    hasKappaGate: false,
   },
   delegatic: {
     loop_id: "delegatic.governance",
@@ -152,7 +170,9 @@ export const DEMO_MANIFESTS = {
     role: "Watchtower Complex", schema: "(implicit)",
     phases: [
       { id: "compose", kind: "compose", timeout_ms: 10000 },
-      { id: "interact", kind: "interact", timeout_ms: 60000 },
+      // interact wraps a full Graphonomous benchmark run (spec §3.3) —
+      // PRISM pauses here until_done while the nested memory loop executes.
+      { id: "interact", kind: "interact", timeout_ms: 60000, nested_fort: "graphonomous" },
       { id: "observe", kind: "observe", timeout_ms: 15000 },
       { id: "reflect", kind: "reflect", timeout_ms: 10000 },
       { id: "diagnose", kind: "diagnose", timeout_ms: 5000 },
@@ -190,33 +210,26 @@ export const DEMO_MANIFESTS = {
 // ── L0: District Generator ──
 function generateDistrict() {
   const fortIds = Object.keys(DEMO_MANIFESTS);
-  const cols = 4;
-  const xSpacing = 220;
-  const ySpacing = 180;
 
+  // OpenSentience is not a fort (spec §10.6) — it is rendered as a bedrock
+  // substrate via BedrockLayer.svelte, not as a gate node. Positions are
+  // rewritten by layoutDistrict below (role-tiered, centered rows).
+  /** @type {any[]} */
   const nodes = [
     {
       id: "shared-ground",
       type: "gate",
-      position: { x: cols * xSpacing / 2 - 60, y: -30 },
+      position: { x: 0, y: 0 },
       data: { label: "amp.*", detail: "Shared identity · workspaces · entitlements" },
-    },
-    {
-      id: "bedrock",
-      type: "gate",
-      position: { x: cols * xSpacing / 2 - 60, y: Math.ceil(fortIds.length / cols) * ySpacing + 80 },
-      data: { label: "OpenSentience", detail: "OS-001 through OS-010 · bedrock protocols" },
     },
   ];
 
-  fortIds.forEach((id, i) => {
+  fortIds.forEach((id) => {
     const m = DEMO_MANIFESTS[id];
-    const col = i % cols;
-    const row = Math.floor(i / cols);
     nodes.push({
       id,
       type: "fort",
-      position: { x: col * xSpacing + 20, y: row * ySpacing + 70 },
+      position: { x: 0, y: 0 },
       data: {
         label: m.label,
         rune: m.rune,
@@ -224,6 +237,21 @@ function generateDistrict() {
         color: m.color,
       },
     });
+  });
+
+  // Synthetic B2B partner fort (spec §3.2) — a foreign AIOS bridged to
+  // ours for one CloudEvent token. Rendered opaque; rooms/phases are never
+  // visible across the bridge, only the outer wall + gate.
+  nodes.push({
+    id: "partner-atlas",
+    type: "b2bopaque",
+    position: { x: 0, y: 0 },
+    data: {
+      label: "Atlas AIOS",
+      rune: "ᚷ",
+      role: "B2B partner · opaque",
+      color: "#5b6a8a",
+    },
   });
 
   const edges = [
@@ -235,8 +263,15 @@ function generateDistrict() {
     e({ id: "e-prism-fleet", source: "prism", target: "fleetprompt", label: "ReputationUpdate" }),
     e({ id: "e-ttc-webhost", source: "ticktickclock", target: "webhost", label: "SLA", sourceHandle: "left-source", targetHandle: "right-target" }),
     e({ id: "e-geo-graph", source: "geofleetic", target: "graphonomous", label: "Patterns", sourceHandle: "left-source", targetHandle: "right-target" }),
+    // Deliberatic is invoked by Graphonomous during κ-gate routing (spec §3.3).
+    e({ id: "e-graph-delib", source: "graphonomous", target: "deliberatic", label: "DeliberationRequest", animated: true }),
+    // B2B bridge to opaque partner fort (spec §3.2). Only one CloudEvent
+    // token type crosses the bridge; the partner's rooms stay invisible.
+    e({ id: "e-bridge-atlas", source: "fleetprompt", target: "partner-atlas", label: "AgentPublish", animated: true, sourceHandle: "right", targetHandle: "left" }),
   ];
 
+  layoutDistrict({ nodes, edges });
+  seedAllGeometry(nodes);
   return { nodes, edges };
 }
 
@@ -244,23 +279,22 @@ function generateDistrict() {
 function generateCampus(manifest) {
   const nodes = [];
   const edges = [];
-  const xStart = 80;
-  const ySpacing = 160;
-  const xSpacing = 340;
   let prevId = null;
 
-  manifest.phases.forEach((phase, i) => {
-    const col = i % 2;
-    const row = Math.floor(i / 2);
-    const x = xStart + col * xSpacing;
-    const y = 40 + row * ySpacing;
+  manifest.phases.forEach((phase) => {
     const activity = 0.3 + (hash(phase.id) % 70) / 100;
     const state = activity > 0.7 ? "active" : activity > 0.4 ? "pulsing" : "idle";
+
+    // Nested-fort (spec §3.3): if this phase declares `nested_fort`, surface
+    // the child manifest's rune + label on the room so RoomNode can render a
+    // miniature fort badge in the corner.
+    const nestedId = phase.nested_fort;
+    const nested = nestedId ? DEMO_MANIFESTS[nestedId] : null;
 
     nodes.push({
       id: phase.id,
       type: "room",
-      position: { x, y },
+      position: { x: 0, y: 0 },
       data: {
         label: phase.id.replace(/_/g, " "),
         rune: PHASE_RUNES[phase.kind] || "ᚠ",
@@ -268,45 +302,68 @@ function generateCampus(manifest) {
         timeout: phase.timeout_ms,
         state,
         activity,
+        nestedFortId: nestedId ?? null,
+        nestedFortRune: nested?.rune ?? null,
+        nestedFortLabel: nested?.label ?? null,
+        nestedFortColor: nested?.color ?? null,
       },
     });
 
     if (prevId) {
+      // Handles will be re-wired by layoutCampus/autoWireHandles.
       edges.push(
         e({
           id: `e-${prevId}-${phase.id}`,
           source: prevId,
           target: phase.id,
           animated: true,
-          sourceHandle: col === 0 ? "right" : "bottom",
-          targetHandle: col === 0 ? "left" : "top",
         })
       );
     }
     prevId = phase.id;
   });
 
-  // Add kappa gate for systems that have it
+  // κ-gate: decision point between route and act. Added before layout so
+  // the gate participates in topological ordering, then pinned below the
+  // route→act span afterwards so it reads as a branching bypass.
+  /** @type {any} */
+  let kappaGate = null;
   if (manifest.hasKappaGate) {
     const routePhase = manifest.phases.find((p) => p.kind === "route");
     const actPhase = manifest.phases.find((p) => p.kind === "act");
     if (routePhase && actPhase) {
-      const routeNode = nodes.find((n) => n.id === routePhase.id);
-      if (routeNode) {
-        nodes.push({
-          id: "kappa-gate",
-          type: "gate",
-          position: { x: routeNode.position.x + 170, y: routeNode.position.y + 80 },
-          data: { label: "κ gate", detail: "κ=0 → act · κ>0 → deliberate" },
-        });
-        edges.push(
-          e({ id: "e-route-kgate", source: routePhase.id, target: "kappa-gate" }),
-          e({ id: "e-kgate-act", source: "kappa-gate", target: actPhase.id, label: "κ=0" })
-        );
-      }
+      kappaGate = {
+        id: "kappa-gate",
+        type: "gate",
+        position: { x: 0, y: 0 },
+        data: { label: "κ gate", detail: "κ=0 → act · κ>0 → deliberate", _pinned: true, kind: "route" },
+      };
+      nodes.push(kappaGate);
+      edges.push(
+        e({ id: "e-route-kgate", source: routePhase.id, target: "kappa-gate", _pinnedHandles: true, sourceHandle: "bottom", targetHandle: "top" }),
+        e({ id: "e-kgate-act", source: "kappa-gate", target: actPhase.id, label: "κ=0", _pinnedHandles: true, sourceHandle: "right", targetHandle: "bottom" })
+      );
     }
   }
 
+  layoutCampus({ nodes, edges });
+
+  // Pin κ-gate under the midpoint between route and act rooms (after lattice
+  // positions them) so it reads as a bypass branch off the route→act edge.
+  if (kappaGate) {
+    const routePhase = manifest.phases.find((/** @type {any} */ p) => p.kind === "route");
+    const actPhase = manifest.phases.find((/** @type {any} */ p) => p.kind === "act");
+    const routeNode = nodes.find((n) => n.id === routePhase?.id);
+    const actNode = nodes.find((n) => n.id === actPhase?.id);
+    if (routeNode && actNode) {
+      kappaGate.position = {
+        x: (routeNode.position.x + actNode.position.x) / 2,
+        y: routeNode.position.y + 110,
+      };
+    }
+  }
+
+  seedAllGeometry(nodes);
   return { nodes, edges };
 }
 
@@ -371,6 +428,7 @@ function generateWing(manifest, roomId) {
     })
   );
 
+  seedAllGeometry(nodes);
   return { nodes, edges };
 }
 
@@ -440,6 +498,7 @@ function generateRoom(manifest, nodeId) {
     );
   }
 
+  seedAllGeometry(nodes);
   return { nodes, edges };
 }
 
@@ -467,6 +526,7 @@ function generateRune(manifest, nodeId) {
   const edgesReturned = nodesReturned + (h % 30);
   const hasKappa = h % 3 === 0;
 
+  /** @type {any[]} */
   const nodes = [
     {
       id: "rune-detail",
@@ -527,6 +587,48 @@ function generateRune(manifest, nodeId) {
   }
   edges.push(e({ id: "e-rune-seq", source: "rune-detail", target: "seq-0" }));
 
+  // Canonical rune sequences (spec §5.3) — reference palette rendered below
+  // the active trace so power users can compare the current path against
+  // every canonical sequence without leaving L4.
+  const CANONICAL = [
+    { id: "fast",    name: "Fast Path",         runes: ["ᚲ", "ᚨ", "ᚠ"] },
+    { id: "delib",   name: "Deliberation Path", runes: ["ᚲ", "ᚨ", "ᚱ", "ᚠ"] },
+    { id: "escal",   name: "Escalation Path",   runes: ["ᚺ", "ᛉ", "ᛗ"] },
+    { id: "feedback",name: "Feedback Closure",  runes: ["ᛃ", "ᛞ"] },
+    { id: "bridge",  name: "Bridge Relay",      runes: ["ᚷ", "ᚨ", "ᚷ"] },
+    { id: "revive",  name: "Memory Revival",    runes: ["ᛁ", "ᛞ"] },
+  ];
+  const paletteBaseY = 500;
+  const rowHeight = 80;
+  CANONICAL.forEach((s, row) => {
+    nodes.push({
+      id: `ref-label-${s.id}`,
+      type: "gate",
+      position: { x: 30, y: paletteBaseY + row * rowHeight },
+      data: { label: s.name, detail: "sequence" },
+    });
+    s.runes.forEach((glyph, col) => {
+      nodes.push({
+        id: `ref-${s.id}-${col}`,
+        type: "gate",
+        position: { x: 240 + col * 110, y: paletteBaseY + row * rowHeight },
+        data: { label: glyph, detail: "" },
+      });
+      if (col > 0) {
+        edges.push(
+          e({
+            id: `e-ref-${s.id}-${col}`,
+            source: `ref-${s.id}-${col - 1}`,
+            target: `ref-${s.id}-${col}`,
+            sourceHandle: "right",
+            targetHandle: "left",
+          })
+        );
+      }
+    });
+  });
+
+  seedAllGeometry(nodes);
   return { nodes, edges };
 }
 
@@ -594,6 +696,7 @@ export function generateBuildCorridor(builds, fortId) {
     }));
   }
 
+  seedAllGeometry(nodes);
   return { nodes, edges };
 }
 
@@ -658,6 +761,7 @@ export function generateTestRoom(build) {
     }
   });
 
+  seedAllGeometry(nodes);
   return { nodes, edges };
 }
 
@@ -789,6 +893,7 @@ export function generateFactoryControlRoom(factoryState) {
     }
   });
 
+  seedAllGeometry(nodes);
   return { nodes, edges };
 }
 

@@ -31,10 +31,19 @@ canonical (`*.pulse.json`, `*.ampersand.json`); the view just makes them walkabl
 npm install
 npm run dev      # Vite dev server (default port 8093)
 npm run build    # Production build (Cloudflare Pages adapter)
-npm run check    # svelte-check
+npm run check    # svelte-check — must pass 0 errors before merge
 ```
 
 The dev server also drives the `preview_*` tooling via `.claude/launch.json`.
+
+### Verification gate
+
+Every PR into `main` must satisfy:
+
+- `npm run check` &mdash; 0 errors. Pre-existing a11y warnings on legacy components
+  are tracked separately and get fixed in the feature stage that touches those
+  components (see `docs/spec/README.md` phase plan).
+- `npm run build` &mdash; clean Cloudflare Pages bundle.
 
 ## Project layout
 

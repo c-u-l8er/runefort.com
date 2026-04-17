@@ -15,7 +15,7 @@
     if (!iso) return "";
     const d = new Date(iso);
     const now = new Date();
-    const diff = now - d;
+    const diff = now.getTime() - d.getTime();
     if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
     return `${Math.floor(diff / 86400000)}d ago`;

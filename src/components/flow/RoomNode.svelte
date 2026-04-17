@@ -1,26 +1,65 @@
 <script>
   import { Handle, Position } from "@xyflow/svelte";
-  import { isOverlayActive } from "$lib/stores/overlays.svelte.js";
-  import { thermalStyle, confidenceStyle, temporalStyle, diagnosticStyle, topologyStyle, assemblyStyle } from "$lib/overlayEffects.js";
-  let { data } = $props();
+  import { isOverlayActiveOn, setLocalOverlay, clearLocalOverlay } from "$lib/stores/overlays.svelte.js";
+  import { thermalStyle, confidenceStyle, temporalStyle, diagnosticStyle, topologyStyle, assemblyStyle, consolidationClass } from "$lib/overlayEffects.js";
+  let { id, data } = $props();
 
-  const stateColors = { active: "#6ac48c", pulsing: "#e8a84c", idle: "#44423d" };
-  const baseBorder = stateColors[data.state] || "#44423d";
+  // Spec §6.1 — Living Fort state palette. `sealed` is a dormant state where
+  // every child tile has been pruned; the room shows an ice rune (ᛁ) and can
+  // still be woken by Memory Revival (ᛁᛞ). `alert` lets any component flip a
+  // room into tower-style alerting when a disruption fires nearby.
+  const stateColors = {
+    active: "#6ac48c",
+    pulsing: "#e8a84c",
+    idle: "#44423d",
+    sealed: "#5b6a8a",
+    alert: "#e85a5a",
+  };
+  let baseBorder = $derived(stateColors[data.state] || "#44423d");
+  let isSealed = $derived(data.state === "sealed");
+  let isGrowing = $derived(data.lifecycle === "growing");
+  let isShrinking = $derived(data.lifecycle === "shrinking");
+  // Spec §6.2 — consolidation events drive the 6 keyframes defined in app.css.
+  // `data.consolidationEvent` is one of decay|prune|merge|strengthen|promote|abstract.
+  // The Living Fort driver (or a real consolidate(run) completion) sets this field
+  // and clears it after the animation completes.
+  let consolidateClass = $derived(consolidationClass(data.consolidationEvent));
 
-  // Overlay-derived styles
-  let thermal = $derived(isOverlayActive("thermal") ? thermalStyle(data.activity ?? 0.5) : null);
-  let conf = $derived(isOverlayActive("confidence") && data.confidence !== undefined ? confidenceStyle(data.confidence) : null);
-  let temporal = $derived(isOverlayActive("temporal") ? temporalStyle(data.kind, data.timeout) : null);
-  let diag = $derived(isOverlayActive("diagnostic") ? diagnosticStyle(data) : null);
-  let topo = $derived(isOverlayActive("topology") ? topologyStyle(data, "room") : null);
-  let assembly = $derived(isOverlayActive("assembly") && data.buildStatus ? assemblyStyle(data) : null);
+  // Motion-is-the-menu (spec §2.3): hovering a room fades Thermal in on *this room*.
+  // Global overlays still apply via isOverlayActiveOn which checks global OR local.
+  function revealThermal() { setLocalOverlay(id, "thermal"); }
+  function unrevealThermal() { clearLocalOverlay(id, "thermal"); }
+
+  // Overlay-derived styles (now keyed to this node's local+global activation)
+  let thermal = $derived(isOverlayActiveOn(id, "thermal") ? thermalStyle(data.activity ?? 0.5) : null);
+  let conf = $derived(isOverlayActiveOn(id, "confidence") && data.confidence !== undefined ? confidenceStyle(data.confidence) : null);
+  let temporal = $derived(isOverlayActiveOn(id, "temporal") ? temporalStyle(data.kind, data.timeout) : null);
+  let diag = $derived(isOverlayActiveOn(id, "diagnostic") ? diagnosticStyle(data) : null);
+  let topo = $derived(isOverlayActiveOn(id, "topology") ? topologyStyle(data, "room") : null);
+  let assembly = $derived(isOverlayActiveOn(id, "assembly") && data.buildStatus ? assemblyStyle(data) : null);
 
   let overlayBg = $derived(assembly?.bg ?? thermal?.bg ?? conf?.bg ?? "transparent");
   let overlayBorder = $derived(assembly?.border ?? topo?.border ?? temporal?.border ?? conf?.border ?? thermal?.border ?? baseBorder);
   let overlayGlow = $derived(assembly?.glow ?? thermal?.glow ?? conf?.glow ?? topo?.glow ?? "none");
 </script>
 
-<div class="room-node" style="border-color: {overlayBorder}60; background: {overlayBg === 'transparent' ? '#0e0f14' : overlayBg}; box-shadow: {overlayGlow};">
+<div
+  class="room-node {consolidateClass}"
+  class:sealed={isSealed}
+  class:growing={isGrowing}
+  class:shrinking={isShrinking}
+  style="border-color: {overlayBorder}60; background: {overlayBg === 'transparent' ? '#0e0f14' : overlayBg}; box-shadow: {overlayGlow};"
+  role="group"
+  aria-label={`Room ${data.label ?? id}${isSealed ? ' (sealed — dormant)' : ''} — hover to reveal thermal overlay`}
+  tabindex="0"
+  onmouseenter={revealThermal}
+  onmouseleave={unrevealThermal}
+  onfocus={revealThermal}
+  onblur={unrevealThermal}
+>
+  {#if isSealed}
+    <div class="sealed-rune" aria-hidden="true">ᛁ</div>
+  {/if}
   <div class="room-header">
     <span class="room-rune">{data.rune}</span>
     <span class="room-label">{data.label}</span>
@@ -74,6 +113,20 @@
       {/if}
     </div>
   {/if}
+
+  {#if data.nestedFortId}
+    <!-- Spec §3.3 — nested fort. Miniature <FortNode>-like glyph + name
+         on a room whose phase escalates into a child loop (e.g. PRISM's
+         interact wraps Graphonomous; Graphonomous's act_mutate escalates
+         into Deliberatic when κ > 0). -->
+    <div class="nested-fort" style="border-color: {data.nestedFortColor}55; color: {data.nestedFortColor};" aria-label={`nests ${data.nestedFortLabel}`}>
+      <span class="nested-rune">{data.nestedFortRune}</span>
+      <span class="nested-stack">
+        <span class="nested-arrow">↳ nests</span>
+        <span class="nested-label">{data.nestedFortLabel}</span>
+      </span>
+    </div>
+  {/if}
 </div>
 <Handle type="target" position={Position.Top} id="top" />
 <Handle type="source" position={Position.Bottom} id="bottom" />
@@ -87,7 +140,48 @@
     border-radius: 8px;
     padding: 0.75rem 1rem;
     min-width: 160px;
-    transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+    position: relative;
+    transition: background 0.3s, border-color 0.3s, box-shadow 0.3s,
+                transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+                filter 0.4s ease;
+  }
+  .room-node:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(232, 168, 76, 0.4);
+  }
+  /* §6.1 behavior #3 — sealed: ice rune + desaturated dormancy */
+  .room-node.sealed {
+    filter: saturate(0.25) brightness(0.75);
+  }
+  .sealed-rune {
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    font-size: 0.85rem;
+    color: #5b6a8a;
+    opacity: 0.9;
+    pointer-events: none;
+  }
+  /* §6.1 behavior #4 — grow: scale-in pop for freshly appended tiles */
+  .room-node.growing {
+    animation: room-grow 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  @keyframes room-grow {
+    0% { transform: scale(0.94); opacity: 0.6; }
+    60% { transform: scale(1.02); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  /* §6.1 behavior #5 — shrink: contraction on consolidation merge */
+  .room-node.shrinking {
+    animation: room-shrink 600ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  @keyframes room-shrink {
+    0% { transform: scale(1); }
+    100% { transform: scale(0.96); filter: brightness(0.8); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .room-node { transition: none; }
+    .room-node.growing, .room-node.shrinking { animation: none; }
   }
   .room-header {
     display: flex;
@@ -233,5 +327,38 @@
   .assembly-count {
     font-size: 0.45rem;
     opacity: 0.7;
+  }
+
+  /* Nested fort badge (spec §3.3) */
+  .nested-fort {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.4rem;
+    padding: 0.22rem 0.45rem;
+    border: 1px dashed;
+    border-radius: 4px;
+    background: rgba(14, 15, 20, 0.8);
+    font-family: "JetBrains Mono", monospace;
+  }
+  .nested-rune {
+    font-size: 0.85rem;
+    line-height: 1;
+  }
+  .nested-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.08rem;
+  }
+  .nested-arrow {
+    font-size: 0.46rem;
+    letter-spacing: 0.06em;
+    opacity: 0.65;
+    text-transform: uppercase;
+  }
+  .nested-label {
+    font-family: "Cinzel", serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
   }
 </style>

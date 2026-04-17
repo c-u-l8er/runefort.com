@@ -38,6 +38,7 @@ import { registryTrust } from "$lib/play/fleetprompt-client.js";
 let _pipelines = $state(new Map());
 
 /** @type {Map<string, number>} polling interval IDs */
+/** @type {Map<string, ReturnType<typeof setInterval>>} */
 const _pollIntervals = new Map();
 
 export function getPipelines() {
@@ -145,6 +146,7 @@ function _hash(s) {
   return Math.abs(h);
 }
 
+/** @type {Array<"succeeded" | "failed" | "pending" | "running">} */
 const BUILD_STATUSES = ["succeeded", "succeeded", "succeeded", "failed", "succeeded"];
 const DEPLOY_STAGES = ["none", "staging", "canary", "production"];
 const TEST_NAMES = [

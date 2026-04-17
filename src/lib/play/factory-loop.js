@@ -138,7 +138,7 @@ export async function watchPriorFailures(fortId, classification) {
 /**
  * Heuristic signal classification. No LLM calls — pure path/label matching.
  * @param {import('$lib/stores/factory.svelte.js').FactorySignal} signal
- * @returns {{ classification: string, confidence: number }}
+ * @returns {{ classification: import('$lib/stores/factory.svelte.js').FactorySignal['classification'], confidence: number }}
  */
 export function classifySignal(signal) {
   // Already classified (e.g. outcome_failure)

@@ -21,7 +21,7 @@ let _data = $state({
   assembly: null,
 });
 
-/** @type {Map<string, number>} */
+/** @type {Map<string, ReturnType<typeof setInterval>>} */
 const _intervals = new Map();
 
 export function getTelemetryData() {
@@ -132,9 +132,9 @@ export function syncPollingToOverlays() {
   };
 
   for (const [overlayKey, telemetryType] of Object.entries(overlayToTelemetry)) {
-    if (isOverlayActive(overlayKey) && !_intervals.has(telemetryType)) {
-      startPolling(telemetryType);
-    } else if (!isOverlayActive(overlayKey) && _intervals.has(telemetryType)) {
+    if (isOverlayActive(/** @type {any} */ (overlayKey)) && !_intervals.has(telemetryType)) {
+      startPolling(/** @type {any} */ (telemetryType));
+    } else if (!isOverlayActive(/** @type {any} */ (overlayKey)) && _intervals.has(telemetryType)) {
       stopPolling(telemetryType);
     }
   }

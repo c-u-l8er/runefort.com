@@ -33,6 +33,30 @@
           The tower fires. Someone gets paged.
         </p>
       </div>
+      <div class="pillar">
+        <div class="pillar-icon rune-icons">ᛃᛞ</div>
+        <h3>Feedback Closure</h3>
+        <p>
+          Learn &rarr; consolidate. Outcomes harvested, edges strengthened,
+          weak nodes pruned. The fort remembers what worked.
+        </p>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon rune-icons">ᚷᚨᚷ</div>
+        <h3>Bridge Relay</h3>
+        <p>
+          Exchange &rarr; route &rarr; exchange. A CloudEvent token crosses a
+          B2B bridge, gets routed, crosses back. Partner rooms stay opaque.
+        </p>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon rune-icons">ᛁᛞ</div>
+        <h3>Memory Revival</h3>
+        <p>
+          Sealed &rarr; breakthrough. A cold room thaws when new evidence
+          makes its dormant nodes relevant again. Dagaz breaks the ice.
+        </p>
+      </div>
     </div>
 
     <div class="rune-display">

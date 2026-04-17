@@ -9,11 +9,25 @@
   let assemblyActive = $derived(isOverlayActive("assembly"));
   let deployColor = $derived(assemblyActive && data.deployStage ? assemblyDeployColor(data.deployStage) : null);
 
+  // Spec §6.1 behavior #9 — gate opens/closes on router permit/block:
+  // `data.gateState` is "open" (permit), "closed" (block), or undefined (default open).
+  const gateState = $derived(data.gateState ?? "open");
+
   let overlayBorder = $derived(deployColor ?? topo?.border ?? "rgba(232, 168, 76, 0.25)");
   let overlayGlow = $derived(deployColor ? `0 0 8px ${deployColor}40` : topo?.glow ?? "none");
 </script>
 
-<div class="gate-node" style="border-color: {overlayBorder}; box-shadow: {overlayGlow};">
+<div
+  class="gate-node"
+  class:gate-closed={gateState === "closed"}
+  class:gate-open={gateState === "open"}
+  style="border-color: {overlayBorder}; box-shadow: {overlayGlow};"
+  aria-label={`Gate ${data.label} ${gateState === "closed" ? "(closed — blocking)" : "(open)"}`}
+>
+  <div class="gate-bars" aria-hidden="true">
+    <span class="gate-bar left"></span>
+    <span class="gate-bar right"></span>
+  </div>
   <div class="gate-label">{data.label}</div>
   <div class="gate-detail">{data.detail}</div>
   {#if topo?.isKappaNode}
@@ -36,7 +50,34 @@
     padding: 0.5rem 0.75rem;
     text-align: center;
     min-width: 80px;
+    position: relative;
     transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  /* §6.1 behavior #9 — gate bars rotate open on permit, square-up on block */
+  .gate-bars {
+    display: flex;
+    justify-content: center;
+    gap: 2px;
+    margin-bottom: 0.35rem;
+    height: 8px;
+  }
+  .gate-bar {
+    width: 3px;
+    height: 8px;
+    background: rgba(232, 168, 76, 0.7);
+    border-radius: 1px;
+    transition: transform 240ms cubic-bezier(0.4, 0, 0.2, 1),
+                background 240ms cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: bottom center;
+  }
+  .gate-node.gate-open .gate-bar.left { transform: rotate(-28deg); }
+  .gate-node.gate-open .gate-bar.right { transform: rotate(28deg); }
+  .gate-node.gate-closed .gate-bar {
+    background: rgba(232, 90, 90, 0.75);
+    transform: rotate(0);
+  }
+  .gate-node.gate-closed {
+    border-color: rgba(232, 90, 90, 0.5);
   }
   .gate-label {
     font-family: "JetBrains Mono", monospace;
@@ -67,5 +108,8 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .gate-bar { transition: none; }
   }
 </style>

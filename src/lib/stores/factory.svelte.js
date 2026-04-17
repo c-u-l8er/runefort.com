@@ -64,7 +64,7 @@ let _state = $state({
   },
 });
 
-/** @type {number|null} */
+/** @type {ReturnType<typeof setInterval>|null} */
 let _watchInterval = null;
 
 // ── Public API ──
@@ -160,7 +160,7 @@ export function ingestSignal(signal) {
 /**
  * Triage a signal — classify and mark ready.
  * @param {string} signalId
- * @param {string} classification
+ * @param {FactorySignal['classification']} classification
  * @param {number} [confidence]
  */
 export function triageSignal(signalId, classification, confidence = 0.9) {
@@ -263,8 +263,8 @@ async function executePipeline(run, signal) {
 /**
  * Update a phase within a run.
  * @param {string} runId
- * @param {string} phaseName
- * @param {string} status
+ * @param {PipelinePhaseResult['phase']} phaseName
+ * @param {PipelinePhaseResult['status']} status
  * @param {object} [result]
  */
 function updatePhase(runId, phaseName, status, result = null) {
@@ -290,7 +290,7 @@ function updatePhase(runId, phaseName, status, result = null) {
   });
 }
 
-/** @param {string} runId @param {string} stage */
+/** @param {string} runId @param {PipelineRun['stage']} stage */
 function updateRunStage(runId, stage) {
   _state.activeRuns = _state.activeRuns.map((r) =>
     r.id === runId ? { ...r, stage } : r
@@ -301,6 +301,7 @@ function updateRunStage(runId, stage) {
 function failRun(runId, reason) {
   const run = _state.activeRuns.find((r) => r.id === runId);
   if (!run) return;
+  /** @type {PipelineRun} */
   const failed = { ...run, stage: "failed", completedAt: new Date().toISOString(), outcome: { status: "failure", reason } };
   logError(`Pipeline failed: ${run.fortId} — ${reason}`, { runId });
   _state.activeRuns = _state.activeRuns.filter((r) => r.id !== runId);
@@ -319,6 +320,7 @@ function failRun(runId, reason) {
 function completeRun(runId, outcome) {
   const run = _state.activeRuns.find((r) => r.id === runId);
   if (!run) return;
+  /** @type {PipelineRun} */
   const completed = { ...run, stage: "complete", completedAt: new Date().toISOString(), outcome };
   logPipeline(`Pipeline complete: ${run.fortId} → ${outcome?.status || "done"}`, { runId });
   logLearn(`Feeding outcome to Graphonomous`, { runId, status: outcome?.status });
@@ -375,7 +377,9 @@ function _hash(s) {
   return Math.abs(h);
 }
 
+/** @type {Array<FactorySignal['classification']>} */
 const DEMO_CLASSIFICATIONS = ["spec_change", "code_change", "bug_report", "regression"];
+/** @type {Array<FactorySignal['source']>} */
 const DEMO_SOURCES = ["git_push", "outcome_failure", "issue_filed"];
 
 /**
@@ -414,6 +418,7 @@ export async function runSyntheticPipeline(signalId) {
   triageSignal(signalId, signal.classification, signal.classificationConfidence);
   await new Promise((r) => setTimeout(r, 500));
 
+  /** @type {PipelineRun} */
   const run = {
     id: crypto.randomUUID(),
     signalId,
@@ -436,7 +441,9 @@ export async function runSyntheticPipeline(signalId) {
     s.id === signalId ? { ...s, status: "processing" } : s
   );
 
+  /** @type {Array<PipelinePhaseResult['phase']>} */
   const phases = ["spec_lifecycle", "build_pipeline", "trust_scoring", "deploy_gate"];
+  /** @type {Array<PipelineRun['stage']>} */
   const stages = ["spec_update", "build", "trust", "deploy"];
 
   for (let i = 0; i < phases.length; i++) {

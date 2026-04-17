@@ -1,0 +1,57 @@
+{
+  "ampersand_version": "0.1",
+  "system_id": "runefort",
+  "version": "0.1.0",
+  "description": "Capability bindings for the RuneFort spatial cognition viewer",
+  "capabilities": {
+    "memory": {
+      "binding": "&memory.graphonomous",
+      "provider": "graphonomous://workspace/{ws_id}",
+      "role": "read",
+      "hard": ["namespace:workspace_scoped"],
+      "soft": ["timescale:fast", "timescale:medium"],
+      "escalate_on": ["missing_provider"]
+    },
+    "reason": {
+      "binding": "&reason.prism",
+      "provider": "prism://workspace/{ws_id}",
+      "role": "read",
+      "hard": [],
+      "soft": ["dimension:latency", "dimension:calibration"],
+      "escalate_on": []
+    },
+    "time": {
+      "binding": "&time.ticktickclock",
+      "provider": "ticktickclock://workspace/{ws_id}",
+      "role": "read",
+      "hard": [],
+      "soft": ["cadence:event", "cadence:tick"],
+      "escalate_on": []
+    },
+    "space": {
+      "binding": "&space.rune",
+      "provider": "supabase://rune",
+      "role": "read_write",
+      "hard": ["workspace_rls"],
+      "soft": ["persist_layout", "persist_views"],
+      "escalate_on": ["auth_missing"]
+    },
+    "govern": {
+      "binding": "&govern.delegatic",
+      "provider": "delegatic://workspace/{ws_id}",
+      "role": "observe",
+      "hard": ["monotonic_policy_inheritance"],
+      "soft": [],
+      "escalate_on": ["policy_block"]
+    }
+  },
+  "loops": [
+    { "loop_id": "runefort.spatial_render", "manifest": "/runefort.spatial_render.pulse.json" },
+    { "loop_id": "runefort.dark_factory", "manifest": "/runefort.dark_factory.pulse.json" }
+  ],
+  "governance": {
+    "llm_calls": "forbidden_inside",
+    "llm_routing": "via_calling_agent_chat_channel",
+    "notes": "RuneFort never calls an LLM from inside the viewer. Natural-language edits and Explain-in-English summaries are either template-based or routed to the calling agent."
+  }
+}

@@ -1,8 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 
-/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
+/** @type {any} */
 let _supabase = null;
-/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
+/** @type {any} */
 let _ampDb = null;
 
 function getUrl() {

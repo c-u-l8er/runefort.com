@@ -78,6 +78,7 @@ export async function fetchCIStatus(owner, repo, sha) {
     if (runs.length === 0) return { status: "unknown", checks: 0 };
     const failed = runs.some((r) => r.conclusion === "failure");
     const inProgress = runs.some((r) => r.status === "in_progress" || r.status === "queued");
+    /** @type {'passing'|'failing'|'running'|'unknown'} */
     let status = "passing";
     if (failed) status = "failing";
     else if (inProgress) status = "running";

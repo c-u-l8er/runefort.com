@@ -24,7 +24,7 @@
     { key: "deploy_gate", label: "DEPLOY", rune: "ᛞ", desc: "Gate check" },
   ];
 
-  let state = $derived(getFactoryState());
+  const factoryState = $derived(getFactoryState());
   let selectedProduct = $state(null);
   let fed = $state(false);
   let showingResult = $state(false);
@@ -33,10 +33,10 @@
 
   // Active run for the selected product
   let activeRun = $derived(
-    state.activeRuns.find(r => r.fortId === selectedProduct?.id) || null
+    factoryState.activeRuns.find(r => r.fortId === selectedProduct?.id) || null
   );
   let completedRun = $derived(
-    state.completedRuns.find(r => r.fortId === selectedProduct?.id) || null
+    factoryState.completedRuns.find(r => r.fortId === selectedProduct?.id) || null
   );
 
   // All phases completed successfully?
@@ -272,7 +272,7 @@
             </div>
             <div class="console-body">
               <div class="console-line dim">$ runefort factory --product {selectedProduct?.id}</div>
-              {#if state.signalQueue.length > 0 || state.activeRuns.length > 0 || state.completedRuns.length > 0}
+              {#if factoryState.signalQueue.length > 0 || factoryState.activeRuns.length > 0 || factoryState.completedRuns.length > 0}
                 <div class="console-line">&#9656; Signal ingested: spec_change → {selectedProduct?.id}</div>
               {/if}
               {#if activeRun || completedRun}

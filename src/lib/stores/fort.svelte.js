@@ -17,28 +17,62 @@ const _importedForts = new Map();
  * @property {string | null} activeRoomId - which room we're viewing (L2+)
  * @property {string | null} activeNodeId - which node we're inspecting (L3+)
  * @property {string | null} activeBuildId - which build tile we're viewing tests for (L3 assembly)
- * @property {import('@xyflow/svelte').Node[]} nodes
- * @property {import('@xyflow/svelte').Edge[]} edges
+ * @property {any[]} nodes
+ * @property {any[]} edges
  * @property {object | null} manifest - current PULSE manifest
  * @property {string | null} savedFortId - database ID if saved
  * @property {string} fortName
  * @property {boolean} dirty - unsaved changes
  */
 
-/** @type {FortState} */
-let fort = $state({
+// Split reactive state: metadata stays deeply reactive ($state), but `nodes`
+// and `edges` are $state.raw per Svelte Flow's requirement. Passing a deeply
+// reactive array to <SvelteFlow> breaks its ResizeObserver pipeline — the
+// library clones nodes via structuredClone which throws on Svelte proxies, so
+// handleBounds never populate and edges never render. See initial-store.svelte.js
+// `warnIfDeeplyReactive` in @xyflow/svelte.
+//
+// Callers that mutated `fort.nodes[i].data.state = ...` must now reassign with
+// a fresh array (`fort.nodes = fort.nodes.map(...)`) — otherwise reactivity
+// doesn't fire and Svelte Flow doesn't see the change.
+let _fortMeta = $state({
   zoomLevel: 0,
   activeFortId: "",
   activeRoomId: null,
   activeNodeId: null,
   activeBuildId: null,
-  nodes: [],
-  edges: [],
   manifest: null,
   savedFortId: null,
   fortName: "Untitled Fort",
   dirty: false,
 });
+let _fortNodes = $state.raw(/** @type {any[]} */ ([]));
+let _fortEdges = $state.raw(/** @type {any[]} */ ([]));
+
+const fort = {
+  get zoomLevel() { return _fortMeta.zoomLevel; },
+  set zoomLevel(v) { _fortMeta.zoomLevel = v; },
+  get activeFortId() { return _fortMeta.activeFortId; },
+  set activeFortId(v) { _fortMeta.activeFortId = v; },
+  get activeRoomId() { return _fortMeta.activeRoomId; },
+  set activeRoomId(v) { _fortMeta.activeRoomId = v; },
+  get activeNodeId() { return _fortMeta.activeNodeId; },
+  set activeNodeId(v) { _fortMeta.activeNodeId = v; },
+  get activeBuildId() { return _fortMeta.activeBuildId; },
+  set activeBuildId(v) { _fortMeta.activeBuildId = v; },
+  get manifest() { return _fortMeta.manifest; },
+  set manifest(v) { _fortMeta.manifest = v; },
+  get savedFortId() { return _fortMeta.savedFortId; },
+  set savedFortId(v) { _fortMeta.savedFortId = v; },
+  get fortName() { return _fortMeta.fortName; },
+  set fortName(v) { _fortMeta.fortName = v; },
+  get dirty() { return _fortMeta.dirty; },
+  set dirty(v) { _fortMeta.dirty = v; },
+  get nodes() { return _fortNodes; },
+  set nodes(v) { _fortNodes = v; },
+  get edges() { return _fortEdges; },
+  set edges(v) { _fortEdges = v; },
+};
 
 export function getFort() {
   return fort;

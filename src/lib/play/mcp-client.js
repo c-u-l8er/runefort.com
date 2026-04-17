@@ -104,7 +104,7 @@ export async function discoverTools(serverUrl, authHeader) {
  * the call once.
  *
  * @param {string} serverUrl
- * @param {string} [authHeader]
+ * @param {string | null | undefined} authHeader
  * @param {string} toolName
  * @param {object} args
  * @param {string} [sessionId]

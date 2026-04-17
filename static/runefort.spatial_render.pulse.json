@@ -1,0 +1,117 @@
+{
+  "pulse_version": "0.1",
+  "loop_id": "runefort.spatial_render",
+  "version": "0.1.0",
+  "description": "Spatial cognition visualization loop — renders PULSE-declared systems as navigable forts",
+  "phases": [
+    {
+      "id": "retrieve_layout",
+      "kind": "retrieve",
+      "description": "Fetch fort skeleton from PULSE manifests + [&] capabilities",
+      "inputs": ["pulse_manifests", "ampersand_manifests"],
+      "outputs": ["fort_skeleton"],
+      "timeout_ms": 5000
+    },
+    {
+      "id": "route_zoom",
+      "kind": "route",
+      "description": "Determine render detail level based on viewport + semantic zoom thresholds",
+      "inputs": ["fort_skeleton", "viewport_state"],
+      "outputs": ["render_plan"],
+      "timeout_ms": 100
+    },
+    {
+      "id": "act_render",
+      "kind": "act",
+      "description": "Render tiles, overlays, animations to DOM/SVG",
+      "inputs": ["render_plan", "live_telemetry"],
+      "outputs": ["rendered_frame"],
+      "timeout_ms": 16
+    },
+    {
+      "id": "learn_interaction",
+      "kind": "learn",
+      "description": "Learn from user navigation patterns — which views are useful, which are ignored",
+      "inputs": ["user_events", "viewport_history"],
+      "outputs": ["interaction_signal"],
+      "timeout_ms": 1000
+    },
+    {
+      "id": "consolidate_layout",
+      "kind": "consolidate",
+      "description": "Optimize fort layouts based on usage patterns — frequently visited rooms move closer, unused rooms recede",
+      "inputs": ["interaction_signals", "fort_skeleton"],
+      "outputs": ["optimized_layout"],
+      "timeout_ms": 30000
+    }
+  ],
+  "closure": "eventual",
+  "cadence": {
+    "type": "event",
+    "description": "Renders on viewport change, telemetry update, or user interaction"
+  },
+  "substrates": {
+    "memory": "graphonomous://workspace/{ws_id}",
+    "policy": "delegatic://workspace/{ws_id}",
+    "audit": "supabase://rune.views",
+    "auth": "supabase://auth",
+    "time": "ticktickclock://workspace/{ws_id}"
+  },
+  "invariants": {
+    "phase_atomicity": true,
+    "feedback_immutability": true,
+    "append_only_audit": true,
+    "kappa_routing": false,
+    "quorum_before_commit": false,
+    "outcome_grounding": true,
+    "trace_id_propagation": true
+  },
+  "connections": [
+    {
+      "signal": "TopologyContext",
+      "direction": "consume",
+      "source_loop": "graphonomous.memory_loop",
+      "source_phase": "route_topology",
+      "target_phase": "route_zoom",
+      "delivery": "best_effort"
+    },
+    {
+      "signal": "OutcomeSignal",
+      "direction": "consume",
+      "source_loop": "*",
+      "source_phase": "*_learn",
+      "target_phase": "act_render",
+      "delivery": "best_effort"
+    },
+    {
+      "signal": "ConsolidationEvent",
+      "direction": "consume",
+      "source_loop": "graphonomous.memory_loop",
+      "source_phase": "consolidate_idle",
+      "target_phase": "act_render",
+      "delivery": "best_effort"
+    },
+    {
+      "signal": "ConsolidationEvent",
+      "direction": "consume",
+      "source_loop": "agentelic.build_pipeline",
+      "source_phase": "consolidate_artifacts",
+      "target_phase": "act_render",
+      "delivery": "best_effort",
+      "description": "Build completion events drive Assembly overlay updates"
+    },
+    {
+      "signal": "ReputationUpdate",
+      "direction": "consume",
+      "source_loop": "fleetprompt.trust",
+      "source_phase": "act_rerank",
+      "target_phase": "act_render",
+      "delivery": "best_effort",
+      "description": "Trust score changes drive Assembly overlay trust badges"
+    }
+  ],
+  "telemetry": {
+    "phase_metrics": ["duration_ms", "tiles_rendered", "overlay_count"],
+    "loop_metrics": ["frame_rate", "viewport_changes_per_min", "zoom_level_distribution"]
+  }
+}

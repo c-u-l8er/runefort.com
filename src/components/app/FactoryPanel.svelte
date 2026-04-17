@@ -9,6 +9,7 @@
   import { getFort } from "$lib/stores/fort.svelte.js";
   import { findConnection } from "$lib/stores/mcp.svelte.js";
 
+  /** @type {{ open?: boolean, onclose?: () => void }} */
   let { open = false, onclose = () => {} } = $props();
 
   const factory = getFactoryState();
@@ -146,7 +147,7 @@
     <div class="threshold">
       <label>Deploy threshold: <strong>{config.deployThreshold}</strong></label>
       <input type="range" min="0" max="100" bind:value={config.deployThreshold}
-        oninput={(e) => updateConfig({ deployThreshold: +e.target.value })} />
+        oninput={(e) => updateConfig({ deployThreshold: +(/** @type {HTMLInputElement} */ (e.target)).value })} />
     </div>
 
     <!-- Signal Queue -->

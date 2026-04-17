@@ -2,6 +2,7 @@
   import { agentBuild } from "$lib/play/agentelic-client.js";
   import { fetchPipelineStatus } from "$lib/stores/assembly.svelte.js";
 
+  /** @type {{ open?: boolean, fortId?: string, onclose?: () => void }} */
   let { open = false, fortId = "", onclose = () => {} } = $props();
   let building = $state(false);
   let result = $state("");

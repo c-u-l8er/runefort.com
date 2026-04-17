@@ -8,6 +8,7 @@
   import GateNode from "./flow/GateNode.svelte";
   import { levels, viewerTitles, dataTitles, flowData, jsonPanels } from "$lib/data/zoomData.js";
 
+  /** @type {any} */
   const nodeTypes = { fort: FortNode, room: RoomNode, tile: TileNode, rune: RuneNode, gate: GateNode };
 
   let activeLevel = $state(0);
@@ -48,8 +49,8 @@
       </div>
       <div class="zoom-canvas">
         {#key activeLevel}
-          <SvelteFlow nodes={flowData[activeLevel].nodes} edges={flowData[activeLevel].edges} {nodeTypes} fitView colorMode="dark">
-            <Background color="rgba(232, 168, 76, 0.04)" gap={48} />
+          <SvelteFlow nodes={/** @type {any} */ (flowData[activeLevel].nodes)} edges={/** @type {any} */ (flowData[activeLevel].edges)} {nodeTypes} fitView colorMode="dark">
+            <Background bgColor="rgba(232, 168, 76, 0.04)" gap={48} />
             <Controls />
           </SvelteFlow>
         {/key}

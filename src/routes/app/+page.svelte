@@ -13,6 +13,8 @@
   import TowerNode from "../../components/flow/TowerNode.svelte";
   import WallNode from "../../components/flow/WallNode.svelte";
   import BridgeNode from "../../components/flow/BridgeNode.svelte";
+  import ClockTowerNode from "../../components/flow/ClockTowerNode.svelte";
+  import GoalSeedNode from "../../components/flow/GoalSeedNode.svelte";
   import DistrictNode from "../../components/flow/DistrictNode.svelte";
   import BuildTileNode from "../../components/flow/BuildTileNode.svelte";
   import TestTileNode from "../../components/flow/TestTileNode.svelte";
@@ -33,11 +35,21 @@
   import FactoryPanel from "../../components/app/FactoryPanel.svelte";
   import FactoryConsole from "../../components/app/FactoryConsole.svelte";
   import ConveyorNode from "../../components/flow/ConveyorNode.svelte";
+  import B2bOpaqueNode from "../../components/flow/B2bOpaqueNode.svelte";
+  import B2bGroupNode from "../../components/flow/B2bGroupNode.svelte";
+  import B2bLabelNode from "../../components/flow/B2bLabelNode.svelte";
+  import B2bPhaseNode from "../../components/flow/B2bPhaseNode.svelte";
+  import BedrockLayer from "../../components/flow/BedrockLayer.svelte";
+  import ExplainButton from "../../components/app/ExplainButton.svelte";
+  import OnboardingOverlay from "../../components/app/OnboardingOverlay.svelte";
+  import ToastHost from "../../components/app/ToastHost.svelte";
 
   // Stores
   import { getFort, loadDemoDistrict, zoomIntoFort, zoomIntoRoom, zoomIntoNode, zoomIntoRune, zoomIntoBuildCorridor, zoomIntoBuild, zoomIntoFactoryControl, zoomOut, loadSavedFort } from "$lib/stores/fort.svelte.js";
+  import { loadStarterFort, stopSyntheticPulses } from "$lib/play/starterFort.js";
+  import { startLivingFort, stopLivingFort } from "$lib/play/livingFort.js";
   import { fetchPipelineStatus, getPipelineData } from "$lib/stores/assembly.svelte.js";
-  import { toggleByShortcut, getOverlays, isOverlayActive } from "$lib/stores/overlays.svelte.js";
+  import { toggleByShortcut, getOverlays, isOverlayActive, clearAllLocalOverlays, getLocalActive, observeProximity, stopProximityTracker, getProximityHudState, PROXIMITY_THRESHOLD_RATIO } from "$lib/stores/overlays.svelte.js";
   import { getAuth, initAuth, openAuthModal } from "$lib/stores/auth.svelte.js";
   import { listForts, loadFort, deleteFort } from "$lib/persistence.js";
   import { initApiKey, setApiKey, hasApiKey } from "$lib/stores/apikey.svelte.js";
@@ -46,15 +58,23 @@
   import { syncPollingToOverlays, stopAllPolling as stopTelemetry } from "$lib/stores/telemetry.svelte.js";
   import { loadSessionContext } from "$lib/play/session-learning.js";
   import { getFactoryState, stopWatching as stopFactory } from "$lib/stores/factory.svelte.js";
+  import { toastSuccess, toastInfo, toastError } from "$lib/stores/toast.svelte.js";
 
+  /** @type {any} */
   const nodeTypes = {
     fort: FortNode, room: RoomNode, tile: TileNode, rune: RuneNode,
     gate: GateNode, hall: HallNode, tower: TowerNode, wall: WallNode,
-    bridge: BridgeNode, district: DistrictNode,
+    bridge: BridgeNode, district: DistrictNode, clocktower: ClockTowerNode,
+    goalseed: GoalSeedNode,
     buildtile: BuildTileNode, testtile: TestTileNode,
     conveyor: ConveyorNode,
+    // B2B partner-fort node types (spec §3.2) — opaque shapes for AIOS-to-AIOS
+    // bridges where the partner's rooms are never visible across the boundary.
+    b2bopaque: B2bOpaqueNode, b2bgroup: B2bGroupNode,
+    b2blabel: B2bLabelNode, b2bphase: B2bPhaseNode,
   };
 
+  /** @type {any} */
   const edgeTypes = {
     animated: AnimatedEdge,
     default: AnimatedEdge,
@@ -76,22 +96,105 @@
 
   const levelNames = ["District", "Campus", "Wing", "Room", "Rune"];
 
+  /**
+   * Whether the Starter Fort should load on first visit. Gate: localStorage
+   * flag for unauthed users; authed users with saved forts also skip it (the
+   * saved-fort branch is implemented when auth wiring matures — today the
+   * localStorage flag alone is a safe MVP).
+   */
+  function shouldShowStarterFort() {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("runefort.seen_starter") !== "yes";
+  }
+
   onMount(() => {
-    loadDemoDistrict();
+    // Spec §0.5 / §9 Phase 0 — first-time visitors see the Starter Fort,
+    // never an empty canvas. Returning visitors land on the demo district.
+    if (shouldShowStarterFort()) {
+      loadStarterFort().catch(() => {
+        // If the manifest fails to load (e.g. offline), fall back to the
+        // demo district so the editor still has content.
+        loadDemoDistrict();
+      });
+    } else {
+      loadDemoDistrict();
+    }
     initAuth();
     initApiKey();
     autoConnect().then(() => {
       // Load cross-session context after MCP connections are ready
       loadSessionContext("ecosystem");
+      const n = connectedCount();
+      if (n > 0) toastInfo(`${n} MCP server${n === 1 ? "" : "s"} connected`);
     });
+    // Spec §6.1 — start the Living Fort synthetic driver so the fort visibly
+    // breathes even when no MCP telemetry is connected.
+    startLivingFort();
     // Workspaces are now initialized from auth.svelte.js on auth state change
     // (including INITIAL_SESSION hydration), so no eager call is needed here.
 
     return () => {
       stopTelemetry();
       stopFactory();
+      stopSyntheticPulses();
+      stopLivingFort();
+      stopProximityTracker();
     };
   });
+
+  // Stage D2 — Proximity reveal (spec §0.2 / §2.3 "motion is the menu").
+  // Pans / zooms feed the proximity tracker. It fades Thermal onto rooms near
+  // the viewport center even when the user isn't hovering any single room.
+  // Respecting prefers-reduced-motion is the tracker's responsibility.
+  const ROOM_W_HINT = 160;
+  const ROOM_H_HINT = 100;
+
+  /** @param {{ x: number, y: number, zoom: number }} vp */
+  function buildProximityFrame(vp) {
+    let rect = { width: 1280, height: 720 };
+    if (typeof document !== "undefined") {
+      const el = document.querySelector(".canvas-area");
+      if (el) {
+        const r = el.getBoundingClientRect();
+        rect = { width: r.width, height: r.height };
+      }
+    }
+    const zoom = vp?.zoom || 1;
+    const offsetX = vp?.x ?? 0;
+    const offsetY = vp?.y ?? 0;
+    const centerX = (rect.width / 2 - offsetX) / zoom;
+    const centerY = (rect.height / 2 - offsetY) / zoom;
+    const diagonal = Math.hypot(rect.width / zoom, rect.height / zoom);
+    /** @type {Array<{ id: string, cx: number, cy: number }>} */
+    const rooms = [];
+    for (const n of fort.nodes) {
+      if (n.type !== "room") continue;
+      const w = n.width ?? ROOM_W_HINT;
+      const h = n.height ?? ROOM_H_HINT;
+      rooms.push({
+        id: n.id,
+        cx: (n.position?.x ?? 0) + w / 2,
+        cy: (n.position?.y ?? 0) + h / 2,
+      });
+    }
+    return { centerX, centerY, diagonal, rooms };
+  }
+
+  /**
+   * SvelteFlow `onmove` callback. Fires on every pan/zoom tick — we throttle
+   * inside observeProximity, not here.
+   * @param {MouseEvent | TouchEvent | null} _event
+   * @param {{ x: number, y: number, zoom: number }} vp
+   */
+  function handleViewportChange(_event, vp) {
+    observeProximity(() => buildProximityFrame(vp));
+  }
+
+  // Dev-mode HUD — shows viewport centroid + proximity ring radius in world
+  // coords and the list of rooms currently under the proximity threshold.
+  // Helps tune PROXIMITY_THRESHOLD_RATIO during implementation.
+  const isDev = import.meta.env.DEV;
+  const proximityHud = $derived(getProximityHudState());
 
   function handleKeydown(e) {
     if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
@@ -103,7 +206,12 @@
     }
     if (e.key === "Escape") {
       e.preventDefault();
-      zoomOut();
+      // Clear local lens reveals before zooming out — Esc is a soft clear first.
+      if (getLocalActive().size > 0) {
+        clearAllLocalOverlays();
+      } else {
+        zoomOut();
+      }
     }
   }
 
@@ -155,28 +263,38 @@
 
   /** @param {string} id */
   async function handleLoadFort(id) {
-    const saved = await loadFort(id);
-    loadSavedFort(saved);
-    showBlueprints = false;
+    try {
+      const saved = await loadFort(id);
+      loadSavedFort(saved);
+      showBlueprints = false;
+      toastSuccess(`loaded — ${saved?.name ?? "fort"}`);
+    } catch (err) {
+      toastError(`load failed — ${err instanceof Error ? err.message : "unknown error"}`);
+    }
   }
 
   /** @param {string} id */
   async function handleDeleteFort(id) {
-    await deleteFort(id);
-    savedForts = savedForts.filter((f) => f.id !== id);
+    try {
+      await deleteFort(id);
+      savedForts = savedForts.filter((f) => f.id !== id);
+      toastInfo("fort deleted");
+    } catch (err) {
+      toastError(`delete failed — ${err instanceof Error ? err.message : "unknown error"}`);
+    }
   }
 
-  /** Get overlay-specific edge style */
+  /** Get overlay-specific edge style as an inline CSS string */
   function getEdgeStyle() {
-    if (isOverlayActive("assembly")) return { stroke: "#4a9ade", strokeWidth: 2 };
-    if (isOverlayActive("flow")) return { stroke: "#e8a84c", strokeWidth: 2 };
-    if (isOverlayActive("thermal")) return { stroke: "#e85a5a", strokeWidth: 1.5 };
-    if (isOverlayActive("topology")) return { stroke: "#c4956a", strokeWidth: 2 };
-    if (isOverlayActive("temporal")) return { stroke: "#8a9a9e", strokeWidth: 1.5 };
-    if (isOverlayActive("diagnostic")) return { stroke: "#5b6a8a", strokeWidth: 1.5 };
-    if (isOverlayActive("confidence")) return { stroke: "#6ac48c", strokeWidth: 1.5 };
-    if (isOverlayActive("rune")) return { stroke: "#c4956a", strokeWidth: 1.5 };
-    return {};
+    if (isOverlayActive("assembly")) return "stroke: #4a9ade; stroke-width: 2;";
+    if (isOverlayActive("flow")) return "stroke: #e8a84c; stroke-width: 2;";
+    if (isOverlayActive("thermal")) return "stroke: #e85a5a; stroke-width: 1.5;";
+    if (isOverlayActive("topology")) return "stroke: #c4956a; stroke-width: 2;";
+    if (isOverlayActive("temporal")) return "stroke: #8a9a9e; stroke-width: 1.5;";
+    if (isOverlayActive("diagnostic")) return "stroke: #5b6a8a; stroke-width: 1.5;";
+    if (isOverlayActive("confidence")) return "stroke: #6ac48c; stroke-width: 1.5;";
+    if (isOverlayActive("rune")) return "stroke: #c4956a; stroke-width: 1.5;";
+    return "";
   }
 </script>
 
@@ -216,6 +334,7 @@
       <ZoomBar />
     </div>
     <div class="toolbar-right">
+      <ExplainButton />
       <button class="tool-btn" onclick={() => { showRepoImport = true; }} title="Import Repo">
         <span class="import-icon">&#x1F4C2;</span>
       </button>
@@ -251,33 +370,37 @@
 
   <!-- Canvas -->
   <div class="canvas-area">
-    {#key `${fort.zoomLevel}-${fort.activeFortId}-${fort.activeRoomId}-${fort.activeNodeId}`}
-      <SvelteFlow
-        nodes={$state.snapshot(fort.nodes)}
-        edges={$state.snapshot(fort.edges)}
-        {nodeTypes}
-        {edgeTypes}
-        fitView
-        colorMode="dark"
-        defaultEdgeOptions={{ animated: false, style: getEdgeStyle() }}
-        onnodeclick={handleNodeClick}
-        minZoom={0.1}
-        maxZoom={4}
-      >
-        <Background color="rgba(232, 168, 76, 0.03)" gap={48} />
-        <Controls position="bottom-left" />
-        <MiniMap
-          pannable
-          zoomable
-          nodeColor={(/** @type {any} */ n) => {
-            if (n.type === "fort") return n.data?.color || "#e8a84c";
-            if (n.type === "room") return "#1c1d26";
-            if (n.type === "gate") return "#e8a84c40";
-            return "#15161d";
-          }}
-        />
-      </SvelteFlow>
-    {/key}
+    <!-- @ts-expect-error — SvelteFlow strict prop types don't line up with our untyped fort state -->
+    <SvelteFlow
+      nodes={fort.nodes}
+      edges={fort.edges}
+      {nodeTypes}
+      {edgeTypes}
+      fitView
+      colorMode="dark"
+      defaultEdgeOptions={{ animated: false, style: getEdgeStyle() }}
+      onnodeclick={handleNodeClick}
+      onmove={handleViewportChange}
+      minZoom={0.1}
+      maxZoom={4}
+    >
+      <Background bgColor="rgba(232, 168, 76, 0.03)" gap={48} />
+      <Controls position="bottom-left" />
+      <MiniMap
+        pannable
+        zoomable
+        nodeColor={(/** @type {any} */ n) => {
+          if (n.type === "fort") return n.data?.color || "#e8a84c";
+          if (n.type === "room") return "#1c1d26";
+          if (n.type === "gate") return "#e8a84c40";
+          if (n.type === "b2bopaque") return "#5b6a8a";
+          return "#15161d";
+        }}
+      />
+    </SvelteFlow>
+
+    <!-- OpenSentience bedrock (spec §10.6). Shown only at L0 District view. -->
+    <BedrockLayer visible={fort.zoomLevel === 0} />
 
     <!-- Overlay hint (bottom right) -->
     <div class="overlay-hint">
@@ -293,7 +416,22 @@
     <!-- Interaction hint -->
     {#if fort.zoomLevel < 4}
       <div class="click-hint">
-        Click a {fort.zoomLevel === 0 ? "fort" : fort.zoomLevel === 1 ? "room" : fort.zoomLevel === 2 ? "room" : "tile"} to zoom in · Esc to zoom out
+        Click a {fort.zoomLevel === 0 ? "fort" : fort.zoomLevel === 1 ? "room" : fort.zoomLevel === 2 ? "room" : "tile"} to zoom in · hover a corridor for flow · click a wall to crack it open · Esc to zoom out
+      </div>
+    {/if}
+
+    <!-- Dev-mode proximity HUD (Stage D2). Gated behind import.meta.env.DEV so
+         production bundles never paint it. Shows viewport center coords, the
+         active threshold radius, and rooms currently inside it. -->
+    {#if isDev && proximityHud}
+      <div class="proximity-hud" aria-hidden="true">
+        <span class="hud-label">proximity</span>
+        <span class="hud-stat">r={Math.round(proximityHud.diagonal * PROXIMITY_THRESHOLD_RATIO)}</span>
+        <span class="hud-stat">c=({Math.round(proximityHud.centerX)}, {Math.round(proximityHud.centerY)})</span>
+        <span class="hud-count">{proximityHud.active.length}</span>
+        {#if proximityHud.active.length > 0}
+          <span class="hud-list">{proximityHud.active.join(", ")}</span>
+        {/if}
       </div>
     {/if}
   </div>
@@ -350,6 +488,9 @@
 />
 <FactoryConsole />
 
+<OnboardingOverlay />
+<ToastHost />
+
 <style>
   .editor {
     position: fixed;
@@ -358,6 +499,36 @@
     flex-direction: column;
     background: #09090d;
   }
+  /* Ambient parity with landing page — the tile grid + grain layers are on
+     body::before / body::after but SvelteFlow paints a fullscreen canvas
+     above the body. Re-establish them on the editor shell itself so the
+     toolbar, panels, and background share the landing-page texture.
+     z-index order: 0 grid → 1 flow → 9999 grain (same stack as landing). */
+  .editor::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(232, 168, 76, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(232, 168, 76, 0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .editor::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.02'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9998;
+  }
+  /* @xyflow/svelte's default stylesheet paints `.svelte-flow` white. That
+     bleeds through now that the editor establishes its own stacking context
+     via the ::before tile grid. Force transparency so the editor's
+     `background: #09090d` remains the true surface. The <Background> child
+     still paints its dots/lines on top. */
+  .editor :global(.svelte-flow) { background: transparent; }
 
   /* Toolbar */
   .toolbar {
@@ -545,6 +716,42 @@
     border-radius: 4px;
     border: 1px solid rgba(255, 255, 255, 0.04);
     z-index: 10;
+    white-space: nowrap;
+  }
+  .proximity-hud {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.55rem;
+    color: #7a7770;
+    background: rgba(14, 15, 20, 0.88);
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    border: 1px dashed rgba(232, 168, 76, 0.35);
+    z-index: 20;
+    max-width: 420px;
+    pointer-events: none;
+  }
+  .proximity-hud .hud-label {
+    color: #e8a84c;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.5rem;
+  }
+  .proximity-hud .hud-stat {
+    color: #8a9a9e;
+  }
+  .proximity-hud .hud-count {
+    color: #6ac48c;
+  }
+  .proximity-hud .hud-list {
+    color: #c4956a;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 

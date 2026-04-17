@@ -6,6 +6,7 @@
     import B2bOpaqueNode from "./flow/B2bOpaqueNode.svelte";
     import B2bLabelNode from "./flow/B2bLabelNode.svelte";
 
+    /** @type {any} */
     const nodeTypes = {
         b2bGroup: B2bGroupNode,
         b2bPhase: B2bPhaseNode,
@@ -13,6 +14,7 @@
         b2bLabel: B2bLabelNode,
     };
 
+    /** @type {any[]} */
     const b2bNodes = [
         // Your Fort container
         {
@@ -288,7 +290,7 @@
                     minZoom={0.5}
                     maxZoom={1.5}
                 >
-                    <Background color="rgba(232, 168, 76, 0.03)" gap={48} />
+                    <Background bgColor="rgba(232, 168, 76, 0.03)" gap={48} />
                 </SvelteFlow>
             </div>
         </div>

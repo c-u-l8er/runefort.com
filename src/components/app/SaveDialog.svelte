@@ -3,10 +3,12 @@
   import { getAuth, openAuthModal } from "$lib/stores/auth.svelte.js";
   import { activeOverlayKeys } from "$lib/stores/overlays.svelte.js";
   import { saveFort, updateFort } from "$lib/persistence.js";
+  import { toastSuccess, toastError } from "$lib/stores/toast.svelte.js";
 
   const fort = getFort();
   const auth = getAuth();
 
+  /** @type {{ open?: boolean, onclose?: () => void }} */
   let { open = false, onclose = () => {} } = $props();
   let saving = $state(false);
   let error = $state("");
@@ -24,6 +26,7 @@
     error = "";
     success = "";
     try {
+      /** @type {Record<string, boolean>} */
       const overlays = {};
       for (const k of activeOverlayKeys()) overlays[k] = true;
 
@@ -36,6 +39,7 @@
         });
         markSaved(fort.savedFortId);
         success = "Blueprint updated!";
+        toastSuccess("blueprint updated");
       } else {
         // Use a default workspace for demo (first workspace from the user)
         const result = await saveFort({
@@ -48,9 +52,11 @@
         });
         markSaved(result.id);
         success = "Blueprint saved to the cloud!";
+        toastSuccess("blueprint saved — stored in your workspace");
       }
     } catch (err) {
       error = err.message;
+      toastError(`save failed — ${err.message}`);
     } finally {
       saving = false;
     }
@@ -71,7 +77,7 @@
         <input
           type="text"
           value={fort.fortName}
-          oninput={(e) => setFortName(e.target.value)}
+          oninput={(e) => setFortName(/** @type {HTMLInputElement} */ (e.target).value)}
           placeholder="My Fort"
         />
       </label>

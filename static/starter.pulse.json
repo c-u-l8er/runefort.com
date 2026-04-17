@@ -1,0 +1,72 @@
+{
+  "pulse_version": "0.1",
+  "loop_id": "runefort.starter",
+  "version": "0.1.0",
+  "description": "Starter Fort — a tiny pre-built loop that teaches the editor by being alive on first load",
+  "phases": [
+    {
+      "id": "retrieve_seed",
+      "kind": "retrieve",
+      "description": "Pull a tiny seed of synthetic knowledge — three cards with simple relations",
+      "inputs": ["synthetic_seed"],
+      "outputs": ["seed_context"],
+      "timeout_ms": 1000
+    },
+    {
+      "id": "route_decide",
+      "kind": "route",
+      "description": "Pick the next thing to do — fast path, always, because κ = 0 in the Starter Fort",
+      "inputs": ["seed_context"],
+      "outputs": ["decision"],
+      "timeout_ms": 100
+    },
+    {
+      "id": "act_echo",
+      "kind": "act",
+      "description": "Emit an echo — in the Starter Fort this just produces a pulse along the corridor every ~2s",
+      "inputs": ["decision"],
+      "outputs": ["echo_event"],
+      "timeout_ms": 200
+    }
+  ],
+  "closure": "eventual",
+  "cadence": {
+    "type": "tick",
+    "interval_ms": 2000,
+    "description": "Ticks every two seconds so a first-time visitor sees motion before they learn anything"
+  },
+  "substrates": {
+    "memory": "synthetic://starter",
+    "time": "synthetic://clock"
+  },
+  "invariants": {
+    "phase_atomicity": true,
+    "feedback_immutability": false,
+    "append_only_audit": false,
+    "kappa_routing": false,
+    "quorum_before_commit": false,
+    "outcome_grounding": false,
+    "trace_id_propagation": false
+  },
+  "connections": [],
+  "telemetry": {
+    "phase_metrics": ["duration_ms"],
+    "loop_metrics": ["ticks_per_min"]
+  },
+  "starter_seed": {
+    "rooms": [
+      { "id": "retrieve_seed", "kind": "retrieve", "label": "retrieve", "activity": 0.4 },
+      { "id": "route_decide", "kind": "route", "label": "route", "activity": 0.6 },
+      { "id": "act_echo", "kind": "act", "label": "act", "activity": 0.8 }
+    ],
+    "corridors": [
+      { "from": "retrieve_seed", "to": "route_decide" },
+      { "from": "route_decide", "to": "act_echo" }
+    ],
+    "walls": [
+      { "room": "route_decide", "rune": "ᚨ", "note": "policy check — invisible until you click" }
+    ],
+    "consolidation_ripple_ms": 15000,
+    "notes": "This object is read only by RuneFort's Starter Fort loader. It is not part of the canonical PULSE schema and non-RuneFort consumers should ignore it."
+  }
+}
