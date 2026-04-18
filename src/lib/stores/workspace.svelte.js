@@ -1,6 +1,11 @@
 import { listWorkspaces, loadWorkspaceForts, createWorkspace as createWorkspaceRpc, renameWorkspace as renameWorkspaceRpc, deleteWorkspace as deleteWorkspaceRpc } from "$lib/play/workspaces.js";
 import { loadFort, saveFort } from "$lib/persistence.js";
 import { loadDemoDistrict, loadEmptyWorkspacePlaceholder, loadWorkspaceDistrict, clearWorkspaceForts } from "$lib/stores/fort.svelte.js";
+import { getSupabase } from "$lib/supabase.js";
+// Static imports (not dynamic) so we share the same module instance with the
+// components that read auth state — Vite/HMR can return a separate instance
+// for dynamic imports, which leaves the UI unreactive to our changes here.
+import { getAuth, openAuthModal } from "$lib/stores/auth.svelte.js";
 
 /**
  * @typedef {Object} Workspace
@@ -117,7 +122,59 @@ export async function switchWorkspace(workspaceId) {
 export async function createAndSelectWorkspace(name, opts = {}) {
   ws.loading = true;
   try {
-    const newId = await createWorkspaceRpc(name);
+    let newId;
+    try {
+      newId = await createWorkspaceRpc(name);
+    } catch (err) {
+      // Stale JWT — client thinks it's signed in but auth.users no longer has
+      // the user row (common after a local db reset, or a Supabase project
+      // rebuild). The RPC raises "Session expired — please sign in again"
+      // (SQLSTATE 28000), and as a fallback we also catch the raw FK
+      // violation on workspaces_created_by_fkey.
+      const msg = (err instanceof Error ? err.message : String(err)) || "";
+      // Supabase PostgrestError carries the Postgres SQLSTATE under .code.
+      // 28000 = our explicit "Session expired" raise; 23503 = the raw FK
+      // violation we also want to treat as stale.
+      const code = /** @type {any} */ (err)?.code ?? "";
+      const stale =
+        msg.includes("Session expired") ||
+        msg.includes("workspaces_created_by_fkey") ||
+        code === "28000" ||
+        code === "23503" ||
+        (msg.includes("foreign key") && msg.includes("created_by"));
+      if (stale) {
+        // Clear the stale session + invite re-auth. We do this through the
+        // SAME module instances the UI reads so the toolbar / AuthModal
+        // actually update. Dynamic imports returned a forked instance under
+        // Vite HMR and left the UI unreactive.
+        try {
+          // Nuke the cached token directly. sb.auth.signOut() frequently
+          // fails server-side for a stale/deleted-user JWT and leaves the
+          // token in localStorage, which would re-hydrate the session on
+          // next page load. Clearing localStorage + setting auth.user=null
+          // is the reliable path.
+          if (typeof localStorage !== "undefined") {
+            for (const key of Object.keys(localStorage)) {
+              if (key.startsWith("sb-") && key.endsWith("-auth-token")) {
+                localStorage.removeItem(key);
+              }
+            }
+          }
+          const sb = getSupabase();
+          if (sb) {
+            try { await sb.auth.signOut({ scope: "local" }); }
+            catch { /* already invalid; localStorage is cleared above */ }
+          }
+          const auth = getAuth();
+          auth.user = null;
+          openAuthModal();
+        } catch {
+          // even if sign-out fails, keep the user-facing error
+        }
+        throw new Error("Session expired — please sign in again");
+      }
+      throw err;
+    }
     // Seed a starter fort if the template carries a loader. "Empty" resolves
     // to null and skips seeding entirely — switchWorkspace will then render
     // the EmptyWorkspaceHint.

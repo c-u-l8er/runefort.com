@@ -1,6 +1,7 @@
 <script>
   import { getWorkspaceState, renameActiveWorkspace, deleteWorkspaceAndFallback } from "$lib/stores/workspace.svelte.js";
   import { toastSuccess, toastError } from "$lib/stores/toast.svelte.js";
+  import { portal } from "$lib/actions/portal.js";
 
   /** @type {{ open: boolean, onclose: () => void }} */
   let { open, onclose } = $props();
@@ -81,7 +82,8 @@
 
 {#if open && ws.active}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-  <div class="backdrop" onclick={handleClose}>
+  <!-- Teleport to body so toolbar's backdrop-filter doesn't clip fixed positioning. -->
+  <div class="backdrop" use:portal onclick={handleClose}>
     <div class="modal" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
       <button class="close" onclick={handleClose} aria-label="Close">×</button>
 

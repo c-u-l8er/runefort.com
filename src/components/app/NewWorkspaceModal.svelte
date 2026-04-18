@@ -1,6 +1,7 @@
 <script>
   import { WORKSPACE_TEMPLATES } from "$lib/templates/workspaceTemplates.js";
   import { createAndSelectWorkspace } from "$lib/stores/workspace.svelte.js";
+  import { portal } from "$lib/actions/portal.js";
 
   /**
    * @type {{ open: boolean, onclose: () => void }}
@@ -73,7 +74,8 @@
 
 {#if open}
   <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-  <div class="backdrop" onclick={handleClose}>
+  <!-- Teleport to body so backdrop-filter on toolbar ancestor doesn't clip fixed positioning. -->
+  <div class="backdrop" use:portal onclick={handleClose}>
     <div class="modal" onclick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
       <button class="close" onclick={handleClose} aria-label="Close">×</button>
 
