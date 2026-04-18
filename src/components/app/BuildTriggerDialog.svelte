@@ -1,5 +1,5 @@
 <script>
-  import { agentBuild } from "$lib/play/agentelic-client.js";
+  import { triggerBuildForFort } from "$lib/play/factory-loop.js";
   import { fetchPipelineStatus } from "$lib/stores/assembly.svelte.js";
 
   /** @type {{ open?: boolean, fortId?: string, onclose?: () => void }} */
@@ -13,8 +13,8 @@
     result = "";
     error = "";
     try {
-      const res = await agentBuild(fortId);
-      if (res) {
+      const res = await triggerBuildForFort(fortId);
+      if (res?.build) {
         result = "Build triggered successfully!";
         // Refresh pipeline data after build trigger
         fetchPipelineStatus(fortId);

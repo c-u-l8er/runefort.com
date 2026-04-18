@@ -24,11 +24,43 @@ export function closeAuthModal() {
  */
 function syncWorkspacesForUser(user) {
   if (user) {
-    initWorkspaces().catch((err) => {
-      console.warn("initWorkspaces failed:", err);
-    });
+    initWorkspaces()
+      .then(() => runPendingActionIfAny())
+      .catch((err) => {
+        console.warn("initWorkspaces failed:", err);
+      });
   } else {
     clearWorkspaces();
+  }
+}
+
+/**
+ * Replay any user action that was stashed while the user was signed out
+ * (e.g. "paste manifest JSON" → AuthModal → magic link → back here).
+ * Dynamic imports break a would-be cycle: manifestImport.js imports auth.
+ */
+async function runPendingActionIfAny() {
+  try {
+    const { getPendingAction, clearPendingAction } = await import(
+      "$lib/stores/pendingAction.svelte.js"
+    );
+    const pending = getPendingAction();
+    if (!pending) return;
+    clearPendingAction();
+    if (pending.type === "add_manifest" && pending.manifest) {
+      const { addManifestToActiveWorkspace } = await import("$lib/play/manifestImport.js");
+      await addManifestToActiveWorkspace(pending.manifest, {
+        source: pending.source ?? "resume",
+      });
+    } else if (pending.type === "create_workspace" && pending.name) {
+      const { findTemplate } = await import("$lib/templates/workspaceTemplates.js");
+      const template = pending.templateId ? findTemplate(pending.templateId) : null;
+      await initWorkspaces(); // ensure we have the list before creating
+      const { createAndSelectWorkspace } = await import("$lib/stores/workspace.svelte.js");
+      await createAndSelectWorkspace(pending.name, { template });
+    }
+  } catch (err) {
+    console.warn("pending action replay failed:", err);
   }
 }
 

@@ -42,6 +42,20 @@ export async function listWorkspaces() {
 }
 
 /**
+ * Create a new named workspace for the current user.
+ * Returns the new workspace id. Requires auth.
+ * @param {string} name
+ * @returns {Promise<string>}
+ */
+export async function createWorkspace(name) {
+  const sb = getSupabase();
+  if (!sb) throw new Error("Supabase not configured");
+  const { data, error } = await sb.rpc("create_named_workspace", { p_name: name });
+  if (error) throw error;
+  return data;
+}
+
+/**
  * Load all forts for a workspace.
  * @param {string} workspaceId
  * @returns {Promise<Array<any>>}
@@ -56,6 +70,40 @@ export async function loadWorkspaceForts(workspaceId) {
     .order("updated_at", { ascending: false });
   if (error) return [];
   return data || [];
+}
+
+/**
+ * Rename a workspace. RLS (workspaces_update_admin) ensures only owners/admins
+ * can rename.
+ * @param {string} workspaceId
+ * @param {string} name
+ * @returns {Promise<void>}
+ */
+export async function renameWorkspace(workspaceId, name) {
+  const amp = getAmpDb();
+  if (!amp) throw new Error("Supabase not configured");
+  const { error } = await amp
+    .from("workspaces")
+    .update({ name })
+    .eq("id", workspaceId);
+  if (error) throw error;
+}
+
+/**
+ * Delete a workspace. RLS (workspaces_delete_admin) ensures only owners/admins
+ * can delete. Foreign-key CASCADE on rune.forts / amp.workspace_members wipes
+ * members + forts in the same transaction.
+ * @param {string} workspaceId
+ * @returns {Promise<void>}
+ */
+export async function deleteWorkspace(workspaceId) {
+  const amp = getAmpDb();
+  if (!amp) throw new Error("Supabase not configured");
+  const { error } = await amp
+    .from("workspaces")
+    .delete()
+    .eq("id", workspaceId);
+  if (error) throw error;
 }
 
 /**

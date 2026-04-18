@@ -119,6 +119,65 @@ export const BUILTIN_TOOLS = [
       parameters: { type: "object", properties: {} },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "spawn_team",
+      description:
+        "Spawn a team of worker sessions that share a fort context. Each member gets its own model and MCP allowlist. The current session stays focused — the user can switch to any team member from the session rail. Use this to parallelize work across specialists (e.g. 'architect', 'builder', 'reviewer').",
+      parameters: {
+        type: "object",
+        properties: {
+          members: {
+            type: "array",
+            description: "Team members to spawn. At least one required.",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string", description: "Display name for the session" },
+                role: { type: "string", description: "Functional role, e.g. 'architect', 'builder', 'reviewer'" },
+                model: { type: "string", description: "OpenRouter model id (optional — inherits default)" },
+                mcpAllowlist: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "MCP server names this member can see. Omit for all; [] for none.",
+                },
+              },
+              required: ["name"],
+            },
+          },
+          fortId: {
+            type: "string",
+            description: "Fort context shared by all team members. Defaults to current active fort.",
+          },
+        },
+        required: ["members"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "trigger_build",
+      description:
+        "Trigger an Agentelic build pipeline for a fort (the R! button, via API). Resolves the fort slug to an agent, runs agent_build with an inline PULSE/spec, and returns the build handle. Use sparingly — this invokes the dark factory.",
+      parameters: {
+        type: "object",
+        properties: {
+          fortId: {
+            type: "string",
+            description:
+              "Fort ID (e.g. 'graphonomous', 'owner/repo'). Defaults to the currently active fort if omitted.",
+          },
+          spec: {
+            type: "string",
+            description:
+              "Optional inline spec content (markdown). If omitted a placeholder spec is generated from the fortId.",
+          },
+        },
+      },
+    },
+  },
 ];
 
 /**

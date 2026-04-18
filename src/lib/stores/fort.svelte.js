@@ -20,6 +20,23 @@ function positionScope() {
 const _importedForts = new Map();
 
 /**
+ * Registry of the ACTIVE workspace's saved forts, scoped to the current
+ * workspace. Cleared whenever the workspace changes so Demo / other workspaces
+ * never see them. zoomIntoFort consults this BEFORE `_importedForts` /
+ * DEMO_MANIFESTS, which keeps workspace fort IDs isolated from the ecosystem.
+ * @type {Map<string, { nodes: any[], edges: any[], manifest: any, name: string, color: string, rune: string }>}
+ */
+const _workspaceForts = new Map();
+
+/**
+ * Reset the workspace-scoped fort cache. Called by workspace.svelte.js on
+ * every switch (including the switch to Demo) so stale forts don't leak.
+ */
+export function clearWorkspaceForts() {
+  _workspaceForts.clear();
+}
+
+/**
  * @typedef {Object} FortState
  * @property {number} zoomLevel - 0-4
  * @property {string} activeFortId - which fort we're zoomed into
@@ -87,6 +104,93 @@ export function getFort() {
   return fort;
 }
 
+/**
+ * Build an L0 District view for the active workspace out of its saved forts.
+ * Each row in `forts` becomes a fort node on the district, and its full layout
+ * is registered in `_importedForts` so a later `zoomIntoFort` can unpack it
+ * without another Supabase round-trip.
+ *
+ * Called from workspace.svelte.js (initial switch + refresh) and from
+ * zoomOut / setZoomLevel when the user zooms back to L0 inside a workspace.
+ *
+ * @param {Array<any>} forts rune.forts rows (must include .id, .name, .loop_id,
+ *   and .layout with .nodes/.edges — `select("*")` returns this shape).
+ */
+export function loadWorkspaceDistrict(forts) {
+  /** @type {any[]} */
+  const nodes = [];
+  /** @type {any[]} */
+  const edges = [];
+  const list = Array.isArray(forts) ? forts : [];
+
+  // Rebuild the workspace-scope registry from scratch — callers have already
+  // swapped workspaces, so `ws.forts` is authoritative for this view.
+  _workspaceForts.clear();
+  list.forEach((f, idx) => {
+    const importKey = f.id || f.loop_id;
+    const h = _hash(importKey);
+    const rune = _FUTHARK[h % _FUTHARK.length];
+    const color = _COLORS[h % _COLORS.length];
+    // Register the fort's full layout so clicking its district node can
+    // zoom in without hitting Supabase again. Scoped to the active workspace.
+    if (f.layout?.nodes) {
+      _workspaceForts.set(importKey, {
+        nodes: f.layout.nodes,
+        edges: f.layout.edges ?? [],
+        manifest: null,
+        name: f.name ?? f.loop_id ?? "Untitled",
+        rune,
+        color,
+      });
+    }
+    const col = idx % 4;
+    const row = Math.floor(idx / 4);
+    nodes.push({
+      id: `imported-${importKey}`,
+      type: "fort",
+      position: { x: col * 220 + 40, y: row * 180 + 40 },
+      data: {
+        label: f.name ?? f.loop_id ?? "Untitled",
+        rune,
+        role: f.loop_id ?? "Blueprint",
+        color,
+      },
+    });
+  });
+
+  fort.zoomLevel = 0;
+  fort.activeFortId = "";
+  fort.activeRoomId = null;
+  fort.activeNodeId = null;
+  fort.activeBuildId = null;
+  fort.nodes = nodes;
+  fort.edges = edges;
+  fort.manifest = null;
+  fort.savedFortId = null;
+  fort.fortName = list.length === 1 ? (list[0].name ?? "Workspace") : "Workspace district";
+  fort.dirty = false;
+}
+
+/**
+ * Clear the canvas to a blank state for an intentionally-empty workspace.
+ * Distinct from loadDemoDistrict — which shows the ecosystem district —
+ * because a user who picked the "Empty" template shouldn't see ecosystem
+ * content on their own workspace. Paired with the EmptyWorkspaceHint overlay.
+ */
+export function loadEmptyWorkspacePlaceholder() {
+  fort.zoomLevel = 0;
+  fort.activeFortId = "";
+  fort.activeRoomId = null;
+  fort.activeNodeId = null;
+  fort.activeBuildId = null;
+  fort.nodes = [];
+  fort.edges = [];
+  fort.manifest = null;
+  fort.savedFortId = null;
+  fort.fortName = "Empty workspace";
+  fort.dirty = false;
+}
+
 /** Load the demo district (L0 with all ecosystem forts + imported forts) */
 export function loadDemoDistrict() {
   const district = generateFortFromManifest("district", null);
@@ -128,8 +232,28 @@ export function loadDemoDistrict() {
 
 /** Zoom into a specific fort (L1 campus view) */
 export function zoomIntoFort(fortId) {
-  // Check imported forts first (strip "imported-" prefix from district node IDs)
+  // District node IDs are prefixed with "imported-" regardless of whether
+  // they come from the workspace registry or the global imported-forts map.
   const importKey = fortId.replace(/^imported-/, "");
+
+  // Workspace-scoped forts take priority so a saved-fort ID that happens to
+  // clash with an imported repo name or DEMO_MANIFEST key always resolves
+  // inside the active workspace.
+  const wsFort = _workspaceForts.get(importKey);
+  if (wsFort) {
+    fort.zoomLevel = 1;
+    fort.activeFortId = fortId;
+    fort.activeRoomId = null;
+    fort.activeNodeId = null;
+    applyPositionOverrides(wsFort.nodes, positionScope(), 1);
+    fort.nodes = wsFort.nodes;
+    fort.edges = wsFort.edges;
+    fort.manifest = wsFort.manifest;
+    fort.fortName = wsFort.name;
+    fort.dirty = true;
+    return;
+  }
+
   const imported = _importedForts.get(importKey);
   if (imported) {
     fort.zoomLevel = 1;
@@ -241,11 +365,35 @@ export function zoomIntoBuild(buildId, fortId) {
   fort.dirty = true;
 }
 
+/**
+ * Back out to L0, but pick the right district for the context: the active
+ * workspace's saved forts when signed into a workspace, otherwise the
+ * ecosystem Demo district. Dynamic import avoids a cyclic static import
+ * between fort ↔ workspace stores.
+ */
+async function loadContextualDistrict() {
+  try {
+    const { getWorkspaceState } = await import("$lib/stores/workspace.svelte.js");
+    const ws = getWorkspaceState();
+    if (ws.active) {
+      if (ws.forts.length > 0) {
+        loadWorkspaceDistrict(ws.forts);
+      } else {
+        loadEmptyWorkspacePlaceholder();
+      }
+      return;
+    }
+  } catch {
+    // fall through to demo
+  }
+  loadDemoDistrict();
+}
+
 /** Go back one zoom level */
 export function zoomOut() {
   if (fort.zoomLevel === 0) return;
   if (fort.zoomLevel === 1) {
-    loadDemoDistrict();
+    loadContextualDistrict();
   } else if (fort.zoomLevel === 2) {
     zoomIntoFort(fort.activeFortId);
   } else if (fort.zoomLevel === 3) {
@@ -262,7 +410,7 @@ export function zoomOut() {
 
 /** Set zoom level directly */
 export function setZoomLevel(level) {
-  if (level === 0) loadDemoDistrict();
+  if (level === 0) loadContextualDistrict();
   else if (level === 1 && fort.activeFortId) zoomIntoFort(fort.activeFortId);
   else if (level === 2 && fort.activeRoomId) zoomIntoRoom(fort.activeRoomId);
   else if (level === 3 && fort.activeNodeId) zoomIntoNode(fort.activeNodeId);

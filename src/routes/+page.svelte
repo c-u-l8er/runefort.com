@@ -2,6 +2,7 @@
   import Nav from "../components/Nav.svelte";
   import Hero from "../components/Hero.svelte";
   import Vision from "../components/Vision.svelte";
+  import DarkAgentFactory from "../components/DarkAgentFactory.svelte";
   import DarkFactory from "../components/DarkFactory.svelte";
   import SixtySecond from "../components/SixtySecond.svelte";
   import SemanticZoom from "../components/SemanticZoom.svelte";
@@ -29,6 +30,7 @@
 <Nav />
 <Hero />
 <Vision />
+<DarkAgentFactory />
 <DarkFactory />
 <SixtySecond />
 <SemanticZoom />

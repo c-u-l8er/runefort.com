@@ -34,6 +34,9 @@
   import WorkspaceSwitcher from "../../components/app/WorkspaceSwitcher.svelte";
   import FactoryPanel from "../../components/app/FactoryPanel.svelte";
   import FactoryConsole from "../../components/app/FactoryConsole.svelte";
+  import NewManifestModal from "../../components/app/NewManifestModal.svelte";
+  import CanvasContextMenu from "../../components/app/CanvasContextMenu.svelte";
+  import EmptyWorkspaceHint from "../../components/app/EmptyWorkspaceHint.svelte";
   import ConveyorNode from "../../components/flow/ConveyorNode.svelte";
   import B2bOpaqueNode from "../../components/flow/B2bOpaqueNode.svelte";
   import B2bGroupNode from "../../components/flow/B2bGroupNode.svelte";
@@ -60,6 +63,7 @@
   import { loadSessionContext } from "$lib/play/session-learning.js";
   import { getFactoryState, stopWatching as stopFactory } from "$lib/stores/factory.svelte.js";
   import { toastSuccess, toastInfo, toastError } from "$lib/stores/toast.svelte.js";
+  import { normalizeManifest, addManifestToActiveWorkspace } from "$lib/play/manifestImport.js";
 
   /** @type {any} */
   const nodeTypes = {
@@ -227,6 +231,121 @@
   let showBuildTrigger = $state(false);
   let buildTargetFort = $state("");
 
+  // Right-click context menu + new-manifest modal state
+  const ws = getWorkspaceState();
+  /** @type {{ open: boolean, x: number, y: number, items: any[] }} */
+  let menuState = $state({ open: false, x: 0, y: 0, items: [] });
+  let showNewManifestModal = $state(false);
+  /** @type {"template" | "paste" | "upload"} */
+  let newManifestTab = $state("template");
+
+  const showEmptyWorkspaceHint = $derived(
+    !!ws.active && fort.nodes.length === 0 && fort.zoomLevel === 0,
+  );
+
+  function closeMenu() {
+    menuState = { open: false, x: 0, y: 0, items: [] };
+  }
+
+  function openNewManifest(/** @type {"template"|"paste"|"upload"} */ tab) {
+    newManifestTab = tab;
+    showNewManifestModal = true;
+  }
+
+  const paneMenuItems = [
+    { label: "New Fort from template…", icon: "ᚠ", onclick: () => openNewManifest("template") },
+    { label: "Paste manifest JSON…",   icon: "{}", onclick: () => openNewManifest("paste") },
+    { label: "Upload .pulse.json…",    icon: "⇪", onclick: () => openNewManifest("upload") },
+  ];
+
+  /** @param {any} node */
+  function fortNodeMenuItems(node) {
+    return [
+      { label: "Open",       icon: "→", onclick: () => { fetchPipelineStatus(node.id); zoomIntoFort(node.id); } },
+      { label: "Deploy…",    icon: "⚡", onclick: () => { buildTargetFort = node.id; showBuildTrigger = true; } },
+      { separator: true, label: "" },
+      { label: "Copy fort ID", icon: "⎘", onclick: () => {
+          if (typeof navigator !== "undefined" && navigator.clipboard) {
+            navigator.clipboard.writeText(node.id).catch(() => {});
+            toastInfo("fort id copied");
+          }
+        } },
+    ];
+  }
+
+  /** @param {any} node */
+  function roomNodeMenuItems(node) {
+    return [
+      { label: "Zoom in",    icon: "⤵", onclick: () => zoomIntoRoom(node.id) },
+      { label: "Copy id",    icon: "⎘", onclick: () => {
+          if (typeof navigator !== "undefined" && navigator.clipboard) {
+            navigator.clipboard.writeText(node.id).catch(() => {});
+            toastInfo("id copied");
+          }
+        } },
+    ];
+  }
+
+  /**
+   * @param {MouseEvent} event
+   * @param {any[]} items
+   */
+  function openMenuAt(event, items) {
+    if (!items.length) return;
+    event.preventDefault();
+    menuState = { open: true, x: event.clientX, y: event.clientY, items };
+  }
+
+  /** @param {any} payload */
+  function handlePaneContextMenu(payload) {
+    // SvelteFlow's onpanecontextmenu fires with the native MouseEvent
+    const event = /** @type {MouseEvent} */ (payload instanceof MouseEvent ? payload : payload?.event);
+    if (!event) return;
+    openMenuAt(event, paneMenuItems);
+  }
+
+  /** @param {{ node: any, event: MouseEvent }} payload */
+  function handleNodeContextMenu(payload) {
+    const { node, event } = payload;
+    if (!event || !node) return;
+    let items = [];
+    if (node.type === "fort") items = fortNodeMenuItems(node);
+    else if (node.type === "room") items = roomNodeMenuItems(node);
+    openMenuAt(event, items);
+  }
+
+  /** @param {DragEvent} e */
+  function handleDragOver(e) {
+    if (!e.dataTransfer || ![...e.dataTransfer.types].includes("Files")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }
+
+  /** @param {DragEvent} e */
+  async function handleDrop(e) {
+    if (!e.dataTransfer) return;
+    e.preventDefault();
+    const file = [...e.dataTransfer.files].find(
+      (f) => f.name.endsWith(".pulse.json") || f.type === "application/json" || f.name.endsWith(".json"),
+    );
+    if (!file) {
+      toastError("drop a .pulse.json manifest");
+      return;
+    }
+    try {
+      const text = await file.text();
+      const manifest = JSON.parse(text);
+      const res = normalizeManifest(manifest);
+      if (!res.ok) {
+        toastError(`invalid manifest — ${res.errors[0]}`);
+        return;
+      }
+      await addManifestToActiveWorkspace(manifest, { source: "drop" });
+    } catch (err) {
+      toastError(`parse error — ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   /** @param {{ node: any, event: any }} params */
   function handleNodeClick({ node }) {
     if (fort.zoomLevel === 0 && node.type === "fort") {
@@ -332,11 +451,7 @@
   <!-- Top toolbar -->
   <header class="toolbar">
     <div class="toolbar-left">
-      {#if auth.user}
-        <WorkspaceSwitcher />
-      {:else}
-        <a href="/" class="brand"><span class="brand-rune">ᚲ</span> RuneFort</a>
-      {/if}
+      <WorkspaceSwitcher />
       <button class="tool-btn chat-btn" onclick={() => { showChatPanel = !showChatPanel; }} title="Chat">
         <span class="chat-icon">&#x1F4AC;</span>
       </button>
@@ -393,7 +508,8 @@
   </header>
 
   <!-- Canvas -->
-  <div class="canvas-area">
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="canvas-area" ondragover={handleDragOver} ondrop={handleDrop}>
     <!-- @ts-expect-error — SvelteFlow strict prop types don't line up with our untyped fort state -->
     <SvelteFlow
       nodes={fort.nodes}
@@ -406,6 +522,8 @@
       onnodeclick={handleNodeClick}
       onmove={handleViewportChange}
       onnodedragstop={handleNodeDragStop}
+      onpanecontextmenu={handlePaneContextMenu}
+      onnodecontextmenu={handleNodeContextMenu}
       snapToGrid={true}
       snapGrid={[20, 20]}
       minZoom={0.1}
@@ -425,6 +543,9 @@
         }}
       />
     </SvelteFlow>
+
+    <!-- Intentionally-empty workspace hint (spec §0.5 never-empty principle) -->
+    <EmptyWorkspaceHint visible={showEmptyWorkspaceHint} />
 
     <!-- OpenSentience bedrock (spec §10.6). Shown only at L0 District view. -->
     <BedrockLayer visible={fort.zoomLevel === 0} />
@@ -514,6 +635,20 @@
   onclose={() => { toggleByShortcut("A"); }}
 />
 <FactoryConsole />
+
+<NewManifestModal
+  open={showNewManifestModal}
+  initialTab={newManifestTab}
+  onclose={() => { showNewManifestModal = false; }}
+/>
+
+<CanvasContextMenu
+  open={menuState.open}
+  x={menuState.x}
+  y={menuState.y}
+  items={menuState.items}
+  onclose={closeMenu}
+/>
 
 <OnboardingOverlay />
 <ToastHost />

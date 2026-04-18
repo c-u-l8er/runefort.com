@@ -2,8 +2,6 @@ import { createClient } from "@supabase/supabase-js";
 
 /** @type {any} */
 let _supabase = null;
-/** @type {any} */
-let _ampDb = null;
 
 function getUrl() {
   return (typeof window !== "undefined" && import.meta.env.VITE_SUPABASE_URL) || "http://localhost:54321";
@@ -26,17 +24,15 @@ export function getSupabase() {
   return _supabase;
 }
 
-/** Lazily create amp.* schema client */
+/**
+ * Access the amp.* schema via the same authenticated client used for rune.*.
+ * Using a single client (instead of a second createClient) ensures the user's
+ * JWT is attached to PostgREST requests so RLS on amp.workspaces sees the
+ * signed-in user — otherwise the WorkspaceSwitcher stays empty after sign-in.
+ */
 export function getAmpDb() {
-  if (!_ampDb) {
-    const key = getKey();
-    if (!key) return null;
-    _ampDb = createClient(getUrl(), key, {
-      db: { schema: "amp" },
-      auth: { persistSession: true },
-    });
-  }
-  return _ampDb;
+  const sb = getSupabase();
+  return sb ? sb.schema("amp") : null;
 }
 
 /** Whether Supabase is actually configured */

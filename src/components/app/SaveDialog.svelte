@@ -1,12 +1,14 @@
 <script>
   import { getFort, markSaved, setFortName } from "$lib/stores/fort.svelte.js";
   import { getAuth, openAuthModal } from "$lib/stores/auth.svelte.js";
+  import { getWorkspaceState, switchWorkspace } from "$lib/stores/workspace.svelte.js";
   import { activeOverlayKeys } from "$lib/stores/overlays.svelte.js";
   import { saveFort, updateFort } from "$lib/persistence.js";
   import { toastSuccess, toastError } from "$lib/stores/toast.svelte.js";
 
   const fort = getFort();
   const auth = getAuth();
+  const ws = getWorkspaceState();
 
   /** @type {{ open?: boolean, onclose?: () => void }} */
   let { open = false, onclose = () => {} } = $props();
@@ -41,9 +43,17 @@
         success = "Blueprint updated!";
         toastSuccess("blueprint updated");
       } else {
-        // Use a default workspace for demo (first workspace from the user)
+        // Save into the active workspace. Without an active workspace the
+        // RLS policy on rune.forts (amp.can_write_workspace) will reject the
+        // insert, so surface that intent explicitly instead of silently
+        // sending the user id as workspace_id (the old bug).
+        if (!ws.active) {
+          error = "Pick a workspace first — switch away from Demo in the top-left.";
+          toastError(error);
+          return;
+        }
         const result = await saveFort({
-          workspace_id: auth.user.id,
+          workspace_id: ws.active.id,
           loop_id: fort.activeFortId || "custom.fort",
           name: fort.fortName,
           layout: { nodes: fort.nodes, edges: fort.edges },
@@ -52,7 +62,9 @@
         });
         markSaved(result.id);
         success = "Blueprint saved to the cloud!";
-        toastSuccess("blueprint saved — stored in your workspace");
+        toastSuccess("blueprint saved");
+        // Refresh the workspace so the new fort shows up in the district.
+        await switchWorkspace(ws.active.id);
       }
     } catch (err) {
       error = err.message;

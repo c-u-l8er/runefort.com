@@ -7,8 +7,9 @@
 import { findConnection } from "$lib/stores/mcp.svelte.js";
 import { callTool } from "$lib/play/mcp-client.js";
 import { agentStatus, agentBuild, agentEnsure } from "$lib/play/agentelic-client.js";
-import { getActiveWorkspace } from "$lib/stores/workspace.svelte.js";
+import { getActiveWorkspace, initWorkspaces } from "$lib/stores/workspace.svelte.js";
 import { getAuth } from "$lib/stores/auth.svelte.js";
+import { getSupabase } from "$lib/supabase.js";
 import { registryTrust } from "$lib/play/fleetprompt-client.js";
 import { specValidate } from "$lib/play/specprompt-client.js";
 import { fetchRecentPushes, fetchOpenIssues } from "$lib/play/github-status.js";
@@ -279,6 +280,114 @@ function fortIdToSlug(fortId) {
 }
 
 /**
+ * Resolve workspace_id / user_id from active workspace + auth, falling back to
+ * VITE_DEV_* env vars in dev mode so manual triggers work without a sign-in
+ * round-trip. Returns null if neither source produces both ids.
+ *
+ * IMPORTANT: The env fallback only applies when the user is NOT signed in.
+ * If the user is authenticated but has no workspace yet, return null so
+ * ensureWorkspaceAndUser() can call public.ensure_user_workspace() to create
+ * a real personal workspace for them — we must never build against the dev
+ * seed workspace using a real user's id, otherwise their WorkspaceSwitcher
+ * stays empty after R! and the forts get parented under the wrong workspace.
+ *
+ * @returns {{ workspaceId: string, userId: string } | null}
+ */
+function resolveWorkspaceAndUser() {
+  const workspace = getActiveWorkspace();
+  const auth = getAuth();
+  const workspaceId = workspace?.id;
+  const userId = auth?.user?.id;
+
+  // Happy path: signed-in user with active workspace
+  if (workspaceId && userId) return { workspaceId, userId };
+
+  // Dev-only fallback: ONLY when nothing is signed in at all. Never substitute
+  // env workspace for a signed-in user — they deserve their own workspace.
+  if (!userId && !workspaceId && import.meta.env.DEV) {
+    const devWs = import.meta.env.VITE_DEV_WORKSPACE_ID;
+    const devUser = import.meta.env.VITE_DEV_USER_ID;
+    if (devWs && devUser) return { workspaceId: devWs, userId: devUser };
+  }
+
+  return null;
+}
+
+/**
+ * Like resolveWorkspaceAndUser, but if the user is authenticated and simply
+ * has no workspace yet, auto-creates a personal one via the
+ * `public.ensure_user_workspace()` RPC (idempotent, defined in
+ * ampersand-supabase/migrations/023_webhost_rpc.sql) and re-initializes the
+ * workspace store. Fixes the "Agent creation failed due to missing valid user
+ * identification" flow when a signed-in user asks the chat to start a new
+ * workspace + factory before ever visiting the workspace picker.
+ *
+ * @returns {Promise<{ workspaceId: string, userId: string } | null>}
+ */
+async function ensureWorkspaceAndUser() {
+  const first = resolveWorkspaceAndUser();
+  if (first) return first;
+
+  // Only self-heal if the user is actually authenticated. Unsigned users must
+  // sign in through the UI — we never silently create anonymous workspaces.
+  const userId = getAuth()?.user?.id;
+  if (!userId) return null;
+
+  const sb = getSupabase();
+  if (!sb) return null;
+
+  try {
+    // RPC lives in the public schema, but getSupabase() is scoped to "rune".
+    // Use .schema('public') so PostgREST resolves the function.
+    const client = typeof sb.schema === "function" ? sb.schema("public") : sb;
+    const { error } = await client.rpc("ensure_user_workspace");
+    if (error) {
+      logError(`ensure_user_workspace RPC failed: ${error.message}`);
+      return null;
+    }
+    await initWorkspaces();
+  } catch (err) {
+    logError(`ensure_user_workspace failed: ${err?.message || "unknown"}`);
+    return null;
+  }
+
+  return resolveWorkspaceAndUser();
+}
+
+/**
+ * Manually trigger an Agentelic build for a fortId. Resolves the slug to an
+ * agent UUID via agent_ensure, then calls agent_build with inline spec content.
+ * Does not poll for completion — caller should refresh status separately.
+ *
+ * @param {string} fortId
+ * @param {string} [specContent]
+ * @returns {Promise<{ agentId: string, build: object }>}
+ * @throws when workspace/user is missing, or when an MCP call fails.
+ */
+export async function triggerBuildForFort(fortId, specContent) {
+  const ids = await ensureWorkspaceAndUser();
+  if (!ids) {
+    throw new Error("No active workspace or user — sign in first");
+  }
+  const slug = fortIdToSlug(fortId);
+  const ensured = await agentEnsure({
+    name: fortId,
+    slug,
+    // Match the actual Agentelic template shipped in priv/templates/elixir/mcp-server.
+    productType: "mcp_server",
+    workspaceId: ids.workspaceId,
+    userId: ids.userId,
+  });
+  const agentId = ensured?.agent_id;
+  if (!agentId) throw new Error("agent_ensure returned no agent_id");
+  const spec =
+    specContent ||
+    `# ${fortId}\n\n## Executive Summary\nAuto-generated placeholder spec for ${fortId}.\n\n## Architecture\nTBD.\n\n## Acceptance Tests\n- given input "ping", expect output contains "pong"\n`;
+  const build = await agentBuild(agentId, spec);
+  return { agentId, build };
+}
+
+/**
  * Run the Agentelic build pipeline phase.
  *
  * Resolves the fortId → Agentelic agent UUID via agent_ensure (find-or-create),
@@ -290,11 +399,17 @@ function fortIdToSlug(fortId) {
  * @returns {Promise<object|null>}
  */
 export async function runBuildPipeline(fortId, signal) {
-  const workspace = getActiveWorkspace();
-  const auth = getAuth();
-  if (!workspace?.id || !auth?.user?.id) {
+  // Resolve workspace_id / user_id (dev-env fallback + auto-create personal
+  // workspace for authenticated users via ensure_user_workspace RPC) so R!
+  // works end-to-end for both signed-in and dev-fallback paths.
+  const ids = await ensureWorkspaceAndUser();
+  if (!ids) {
     logError(`build_pipeline: no active workspace or user — sign in first`, { fortId });
     return null;
+  }
+  const { workspaceId, userId } = ids;
+  if (!getActiveWorkspace() && !getAuth()?.user?.id && import.meta.env.DEV) {
+    logPhase(`build_pipeline: using dev fallback workspace/user (not signed in)`, { fortId });
   }
 
   const slug = fortIdToSlug(fortId);
@@ -310,8 +425,11 @@ export async function runBuildPipeline(fortId, signal) {
     const ensured = await agentEnsure({
       name: fortId,
       slug,
-      workspaceId: workspace.id,
-      userId: auth.user.id,
+      // Match the actual Agentelic template shipped in priv/templates/elixir/mcp-server.
+      // Using the default "agent" product_type would fail with "No template found for elixir/agent".
+      productType: "mcp_server",
+      workspaceId,
+      userId,
     });
     agentId = ensured.agent_id;
   } catch (err) {
@@ -375,20 +493,29 @@ export async function runBuildPipeline(fortId, signal) {
 
 /**
  * Run the FleetPrompt trust scoring phase.
+ *
+ * FleetPrompt's `registry_trust` is keyed by the Agentelic agent UUID
+ * (fleet.agents.id joins agentelic.agents.id). When the agent hasn't been
+ * published to the registry yet (the common case for a fresh build) or the
+ * server reports an error, we treat this as "no score yet" (trustScore: 0)
+ * rather than failing the whole pipeline — the deploy gate will then route
+ * through the needs-human path, which is the intended behavior.
+ *
  * @param {string} fortId
- * @param {object} buildResult
- * @returns {Promise<{ trustScore: number, details: object }|null>}
+ * @param {{ agentId?: string } & object} buildResult
+ * @returns {Promise<{ trustScore: number, details: object }>}
  */
 export async function runTrustScoring(fortId, buildResult) {
-  logPhase(`→ fleetprompt.registry_trust(${fortId})`);
+  const agentId = buildResult?.agentId || fortId;
+  logPhase(`→ fleetprompt.registry_trust(${String(agentId).slice(0, 8)}…)`);
   let result;
   try {
-    result = await registryTrust(fortId);
+    result = await registryTrust(agentId);
   } catch (err) {
-    logError(`trust_scoring: ${err?.message || "registry_trust failed"}`, { fortId });
-    return null;
+    logError(`trust_scoring: ${err?.message || "registry_trust failed"} — defaulting to score=0`, { fortId, agentId });
+    return { trustScore: 0, details: { error: err?.message || "registry_trust failed" } };
   }
-  if (!result) return null;
+  if (!result) return { trustScore: 0, details: { error: "fleetprompt not connected or empty response" } };
 
   try {
     const text = result.content?.[0]?.text;

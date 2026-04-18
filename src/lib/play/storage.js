@@ -4,6 +4,7 @@
 const API_KEY_STORAGE = "runefort_play_openrouter_key";
 const MCP_STORAGE = "runefort_play_mcp_connections";
 const PLAY_STATE_STORAGE = "runefort_play_state";
+const CHAT_SESSIONS_STORAGE = "runefort_play_chat_sessions_v1";
 const TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 /**
@@ -93,6 +94,34 @@ export function loadPlayState() {
       localStorage.removeItem(PLAY_STATE_STORAGE);
       return null;
     }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Save chat sessions (Stage K) — array of session objects + currentSessionId.
+ * @param {{ sessions: Array, currentSessionId: string|null }} payload
+ */
+export function saveChatSessions(payload) {
+  try {
+    localStorage.setItem(CHAT_SESSIONS_STORAGE, JSON.stringify(payload));
+  } catch {
+    // silently fail
+  }
+}
+
+/**
+ * Load chat sessions. Returns null if missing or malformed.
+ * @returns {{ sessions: Array, currentSessionId: string|null } | null}
+ */
+export function loadChatSessions() {
+  try {
+    const raw = localStorage.getItem(CHAT_SESSIONS_STORAGE);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.sessions)) return null;
     return parsed;
   } catch {
     return null;

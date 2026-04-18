@@ -16,8 +16,8 @@
       </div>
       <div class="promise">
         <div class="promise-n">3</div>
-        <h3>Ship the factory</h3>
-        <p>Press <span class="r-key">R!</span>. The dark-factory loop watches signals, triages, and sequences SpecPrompt &rarr; Agentelic &rarr; FleetPrompt &rarr; deploy. You watch it happen.</p>
+        <h3>Run the factory</h3>
+        <p>Press <span class="r-key">R!</span> and the spatial UI drives Agentelic &rarr; FleetPrompt &rarr; WebHost &mdash; composed agents come out the far end.</p>
       </div>
     </div>
 

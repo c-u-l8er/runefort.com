@@ -3,6 +3,9 @@
 
 import { BUILTIN_TOOLS } from "./tools.js";
 import { startFlow, stopAllFlows, simulateBenchmark } from "./tokenflow.js";
+import { triggerBuildForFort } from "./factory-loop.js";
+import { spawnTeam } from "$lib/stores/chat.svelte.js";
+import { initWorkspaces, switchWorkspace } from "$lib/stores/workspace.svelte.js";
 
 // ── Canonical manifest loaders ──
 // Convention: all `*.pulse.json` and `*.ampersand.json` live in `static/` and
@@ -55,7 +58,9 @@ export function getAmpersandManifest() {
  * @param {string} name - Tool name
  * @param {object} args - Tool arguments
  * @param {object} ctx - Context: { fortState, fortActions, overlayActions }
- * @returns {string} JSON string result
+ * @returns {string | Promise<string>} JSON string result (async for tools
+ *   that touch MCP servers — `trigger_build` returns a Promise; caller is
+ *   already in an async context so this resolves transparently).
  */
 export function executeBuiltinTool(name, args, ctx) {
   const { fortState, fortActions, overlayActions } = ctx;
@@ -147,6 +152,72 @@ export function executeBuiltinTool(name, args, ctx) {
     case "stop_benchmark": {
       stopAllFlows();
       return JSON.stringify({ success: true, action: "stopped_flows" });
+    }
+
+    case "spawn_team": {
+      // Create a team of worker sessions bound to a shared fort context.
+      // Doesn't switch the current session — the user explicitly picks a
+      // member from the rail if they want to interact with one directly.
+      const members = Array.isArray(args.members) ? args.members : [];
+      if (members.length === 0) {
+        return JSON.stringify({ error: "spawn_team requires at least one member" });
+      }
+      const fortContextId = args.fortId || fortState.activeFortId || fortState.fortName || null;
+      try {
+        const team = spawnTeam(members, { fortContextId });
+        return JSON.stringify({
+          success: true,
+          action: "team_spawned",
+          teamId: team.teamId,
+          fortContextId,
+          members: team.members,
+        });
+      } catch (err) {
+        return JSON.stringify({ error: `spawn_team failed: ${err.message}` });
+      }
+    }
+
+    case "trigger_build": {
+      // Agent-driven R! — presses the dark-factory build pipeline from chat.
+      // Resolves the target fort: explicit arg → current activeFortId →
+      // current fortName. Errors surface as JSON so the LLM can course-correct
+      // (vs. throwing, which would bubble up into the generic tool error
+      // branch and show as "Request failed").
+      const fortId = args.fortId || fortState.activeFortId || fortState.fortName;
+      if (!fortId) {
+        return JSON.stringify({
+          error: "No fortId — pass one explicitly or zoom into a fort first.",
+        });
+      }
+      // Fire-and-forget from the LLM's point of view. Consumers poll the
+      // Factory panel for status. Returning immediately keeps the tool-call
+      // round fast (agent_build itself blocks for several seconds when the
+      // Agentelic template does real work).
+      return triggerBuildForFort(fortId, args.spec).then(
+        async (res) => {
+          // Refresh the workspace switcher so the user can see (and switch to)
+          // the workspace their build just ran against. ensureWorkspaceAndUser
+          // may have auto-created a personal workspace via
+          // public.ensure_user_workspace(); without this refresh, the
+          // WorkspaceSwitcher dropdown stays empty and the user has no way to
+          // navigate to the new fort.
+          try {
+            await initWorkspaces();
+          } catch {
+            // non-fatal — workspace refresh is a UX nicety, not a hard
+            // requirement of the build itself.
+          }
+          return JSON.stringify({
+            success: true,
+            action: "build_triggered",
+            fortId,
+            agentId: res.agentId,
+            build: res.build,
+            hint: "Check the workspace switcher (top left) — your new workspace and fort should now be visible. Open the Factory panel to watch build progress.",
+          });
+        },
+        (err) => JSON.stringify({ error: `trigger_build failed: ${err.message}` }),
+      );
     }
 
     default:
