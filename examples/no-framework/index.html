@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>@runefort/core — no-framework demo</title>
+  <link rel="stylesheet" href="/packages/core/theme.css" />
+  <link rel="stylesheet" href="/packages/core/theme-foundry.css" />
+
+  <!-- Optional syntax highlighting via highlight.js. Loaded via CDN; the
+       editor degrades gracefully to plain monospace if absent. -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/languages/elixir.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 32px;
+      background: #0a0c0a;
+      color: #e8e4d8;
+      font-family: ui-monospace, "JetBrains Mono", monospace;
+      min-height: 100vh;
+    }
+    h1 {
+      font-size: 18px;
+      font-weight: 400;
+      margin: 0 0 8px;
+      letter-spacing: 0.05em;
+    }
+    .lede {
+      font-size: 12px;
+      color: #a8a59a;
+      margin: 0 0 24px;
+      max-width: 70ch;
+      line-height: 1.5;
+    }
+    .stage {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 14px;
+      align-items: stretch;
+    }
+    @media (max-width: 900px) {
+      .stage { grid-template-columns: 1fr; }
+    }
+    rune-editor {
+      min-height: 360px;
+    }
+    .controls {
+      margin-top: 24px;
+      padding: 12px 16px;
+      background: #141714;
+      border: 1px solid #2a322a;
+      font-size: 11px;
+      color: #a8a59a;
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .controls label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .controls input[type="range"] { accent-color: #ff8a3d; }
+    .controls .signal-value {
+      color: #ff8a3d;
+      min-width: 3.5em;
+      display: inline-block;
+    }
+    rune-room { min-height: 80px; }
+    rune-room .room-body {
+      font-size: 11px;
+      color: #a8a59a;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+    rune-room strong {
+      color: #e8e4d8;
+      font-weight: 400;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+    }
+    .footer-note {
+      font-size: 10px;
+      color: #6e6c63;
+      margin-top: 16px;
+    }
+    .footer-note code {
+      color: #7fb850;
+      background: #141714;
+      padding: 1px 6px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>ᚲ @runefort/core — minimal demo</h1>
+<p class="lede">
+  Six rooms, one floor, foundry theme. Click any tile → source opens in the
+  editor on the right (no editor app required, no navigation away). Drag the κ
+  slider to drive the live state binding — the memory tile changes color as κ
+  crosses thresholds. Tab to focus, Arrow keys to navigate adjacencies, Enter
+  to open.
+</p>
+
+<div class="stage">
+
+  <rune-floor
+    id="floor"
+    columns="6"
+    rows="3"
+    vocabulary="supervisor-floor.v1"
+    editor="browser"
+    data-theme="foundry"
+    cell-height="100px"
+    gap="14px">
+
+    <rune-room id="memory" position="0,0" size="3,2"
+               label="memory.ex"
+               anchor="lib/forge/memory.ex:24">
+      <rune-claim pattern="lib/forge/memory/**/*.ex"></rune-claim>
+      <strong>memory.ex</strong>
+      <div class="room-body">graphonomous supervisor · κ-driven · advise mode</div>
+    </rune-room>
+
+    <rune-room id="reason" position="3,0" size="3,1"
+               label="reason.ex"
+               anchor="lib/forge/reason.ex">
+      <strong>reason.ex</strong>
+      <div class="room-body">deliberatic warden · 2 deliberations open</div>
+    </rune-room>
+
+    <rune-room id="pulse" position="3,1" size="3,1"
+               label="pulse.ex"
+               anchor="lib/forge/pulse.ex"
+               state-class="warm">
+      <strong>pulse.ex</strong>
+      <div class="room-body">cadence ✓ · 5s tick · in spec</div>
+    </rune-room>
+
+    <rune-room id="deploy" position="0,2" size="3,1"
+               label="deploy.ex"
+               anchor="lib/forge/deploy.ex"
+               state-class="hot">
+      <strong>deploy.ex</strong>
+      <div class="room-body">webhost steward · rolling 3/7 nodes</div>
+    </rune-room>
+
+    <rune-room id="geo" position="3,2" size="2,1"
+               label="geo.ex"
+               anchor="lib/forge/geo.ex"
+               state-class="fault">
+      <strong>⚠ geo.ex</strong>
+      <div class="room-body">restart 4× · advice: bump timeout to 8s</div>
+    </rune-room>
+
+    <rune-room id="archivist" position="5,2" size="1,1"
+               label="archivist.ex"
+               anchor="lib/forge/archivist.ex"
+               state-class="idle">
+      <strong>archivist</strong>
+      <div class="room-body">on call · last shift 02:12</div>
+    </rune-room>
+
+    <rune-link from="memory" to="reason" bidirectional></rune-link>
+    <rune-link from="reason" to="pulse" bidirectional></rune-link>
+    <rune-link from="memory" to="deploy" bidirectional></rune-link>
+    <rune-link from="deploy" to="geo" bidirectional></rune-link>
+    <rune-link from="geo" to="archivist" bidirectional></rune-link>
+    <rune-link from="pulse" to="geo" bidirectional></rune-link>
+  </rune-floor>
+
+  <rune-editor for="floor" data-theme="foundry">
+    <rune-source for="lib/forge/memory.ex:24" language="elixir" data-source='defmodule MyApp.Forge.Memory do
+  @moduledoc """
+  Supervisor agent for the Graphonomous memory loop.
+  Hovers κ > 0.6 trigger consolidation review.
+  """
+
+  use Runefort.SupervisorAgent,
+    autonomy: :advise,
+    skill: "skills/forge.memory/SKILL.md"
+
+  capabilities [
+    &amp;memory(:graphonomous),
+    &amp;govern(:policy)
+  ]
+
+  claim_region ~r{lib/my_app/memory/}
+
+  # Watch for κ > 0 cycles in the consolidation graph
+  on_signal :topology_context, do: &amp;deliberate/1
+  on_signal :outcome, do: &amp;learn/1
+end'></rune-source>
+
+    <rune-source for="lib/forge/reason.ex" language="elixir" data-source='defmodule MyApp.Forge.Reason do
+  @moduledoc "Deliberatic warden — stewards multi-agent argumentation."
+
+  use Runefort.SupervisorAgent,
+    autonomy: :advise
+
+  capabilities [
+    &amp;reason(:deliberatic),
+    &amp;govern(:merkle)
+  ]
+
+  claim_region ~r{lib/my_app/reasoning/}
+
+  # 2 deliberations currently open
+  def open_deliberations, do: 2
+end'></rune-source>
+
+    <rune-source for="lib/forge/pulse.ex" language="elixir" data-source='defmodule MyApp.Forge.Pulse do
+  @moduledoc "Loop-cadence observer. Verifies every PULSE loop is in spec."
+
+  use Runefort.SupervisorAgent
+
+  cadence "5s"
+
+  capabilities [
+    &amp;time(:pulse),
+    &amp;observe(:cloudevents)
+  ]
+
+  on_signal :tick, do: &amp;verify_cadence/1
+end'></rune-source>
+
+    <rune-source for="lib/forge/deploy.ex" language="elixir" data-source='defmodule MyApp.Forge.Deploy do
+  @moduledoc "WebHost steward. Owns rollouts; signed-telemetry gated."
+
+  use Runefort.SupervisorAgent,
+    autonomy: :act,
+    policy: WebHost.DeployPolicy
+
+  def handle_signal(:deploy_request, state) do
+    # rolling deploy in progress: 3 of 7 nodes shifted
+    WebHost.rollout(state, :blue_green)
+  end
+end'></rune-source>
+
+    <rune-source for="lib/forge/geo.ex" language="elixir" data-source='defmodule MyApp.Forge.Geo do
+  @moduledoc "GeoFleetic regional supervisor. Currently FAULT — restart 4×."
+
+  use Runefort.SupervisorAgent,
+    autonomy: :advise   # demoted from :act after fault
+
+  # supervisor advice:
+  # bump partition timeout to 8s — current 5s is too tight for measured latency
+  def partition_heal(state) do
+    GeoFleetic.merge(state, timeout: 5_000)  # ← suspected culprit
+  end
+end'></rune-source>
+
+    <rune-source for="lib/forge/archivist.ex" language="elixir" data-source='defmodule MyApp.Forge.Archivist do
+  @moduledoc "Night-shift consolidator. Idle / on-call."
+
+  use Runefort.SupervisorAgent
+
+  cadence "@nightly"
+  # last shift: 02:12 · 187 stale nodes pruned · 23 patterns crystallized
+
+  on_signal :night_window, do: &amp;run_consolidation/1
+end'></rune-source>
+  </rune-editor>
+
+</div>
+
+<div class="controls">
+  <label>
+    κ (kappa) signal:
+    <input id="kappa" type="range" min="0" max="1" step="0.01" value="0.5" />
+    <span class="signal-value" id="kappa-value">0.50</span>
+  </label>
+  <span style="color:#6e6c63;">|</span>
+  <span>memory state class: <span id="memory-state" style="color:#ff8a3d;">—</span></span>
+  <button id="dump-json" style="background:#1c211c; color:#7fb850; border:1px solid #2a322a; padding:6px 12px; font-family:inherit; font-size:11px; cursor:pointer;">
+    dump toJSON()
+  </button>
+</div>
+
+<p class="footer-note">
+  ↗ Floor's <code>editor="browser"</code> attribute disables external URL
+  handoff. The paired <code>&lt;rune-editor for="floor"&gt;</code> intercepts
+  <code>rune:open</code> events and renders the matching
+  <code>&lt;rune-source&gt;</code>. Syntax highlighting is provided by
+  <code>highlight.js</code> when present; the editor falls back to plain
+  monospace otherwise.
+</p>
+
+<script type="module">
+  import "/packages/core/src/index.js";
+
+  const floor = document.getElementById("floor");
+  const kappa = document.getElementById("kappa");
+  const kappaValue = document.getElementById("kappa-value");
+  const memoryState = document.getElementById("memory-state");
+
+  // Live signal binding for memory.ex
+  floor.bindings = [{
+    room: "memory",
+    signal: "kappa",
+    thresholds: [
+      { if: "< 0.3", class: "cold" },
+      { if: "< 0.6", class: "warm" },
+      { if: ">= 0.6", class: "hot" },
+    ],
+  }];
+  floor.signals = { kappa: parseFloat(kappa.value) };
+
+  kappa.addEventListener("input", () => {
+    const v = parseFloat(kappa.value);
+    kappaValue.textContent = v.toFixed(2);
+    floor.signals = { kappa: v };
+  });
+
+  floor.addEventListener("rune:state", (e) => {
+    if (e.detail.id === "memory") {
+      memoryState.textContent = e.detail.newClass || "—";
+    }
+  });
+
+  document.getElementById("dump-json").addEventListener("click", () => {
+    console.log(floor.toJSON());
+  });
+
+  // Open memory.ex initially so the editor doesn't start empty
+  queueMicrotask(() => {
+    document.querySelector("rune-editor").show("lib/forge/memory.ex:24");
+  });
+</script>
+
+</body>
+</html>

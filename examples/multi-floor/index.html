@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>@runefort/core — full-hierarchy demo (campus → building → floor → room)</title>
+  <link rel="stylesheet" href="/packages/core/theme.css" />
+  <link rel="stylesheet" href="/packages/core/theme-foundry.css" />
+
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/languages/elixir.min.js"></script>
+
+  <style>
+    html, body { margin: 0; padding: 0; background: #0a0c0a; }
+    body {
+      color: #e8e4d8;
+      font-family: ui-monospace, "JetBrains Mono", monospace;
+    }
+
+    /* The TOP marquee is OUTSIDE any campus — it switches between campuses */
+    body > rune-marquee {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    /* Building grid: elevator | floors | editor */
+    rune-campus rune-building {
+      grid-template-columns: 180px minmax(0, 1fr) 440px;
+      grid-template-rows: auto 1fr;
+      min-height: calc(100vh - 42px); /* minus top marquee */
+    }
+
+    rune-campus rune-building > rune-marquee {
+      grid-column: 1 / -1;
+    }
+    rune-campus rune-building > rune-elevator {
+      grid-row: 2 / -1;
+      grid-column: 1 / 2;
+    }
+    rune-campus rune-building > rune-floor {
+      grid-row: 2 / -1;
+      grid-column: 2 / 3;
+      padding: 24px;
+      align-content: start;
+    }
+    rune-campus rune-building > rune-editor {
+      grid-row: 2 / -1;
+      grid-column: 3 / 4;
+      border-left: 1px solid #2a322a;
+      border-radius: 0;
+    }
+
+    rune-room { min-height: 80px; }
+    rune-room strong {
+      color: #e8e4d8;
+      font-weight: 400;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+    }
+    rune-room .room-body {
+      font-size: 11px;
+      color: #a8a59a;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    /* Brand chip in top marquee */
+    .brand {
+      color: #7fb850;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      margin-right: 28px;
+    }
+
+    /* Mobile: collapse editor below */
+    @media (max-width: 1100px) {
+      rune-campus rune-building {
+        grid-template-columns: 160px minmax(0, 1fr);
+      }
+      rune-campus rune-building > rune-editor {
+        grid-row: auto;
+        grid-column: 1 / -1;
+        border-left: none;
+        border-top: 1px solid #2a322a;
+        min-height: 280px;
+      }
+    }
+  </style>
+</head>
+<body data-theme="foundry">
+
+  <!-- ───────── TOP MARQUEE: campus switcher ───────── -->
+  <rune-marquee scope="campus">
+    <span class="brand">ᚲ RUNEFORT</span>
+    <a href="#ops">Operations</a>
+    <a href="#docs">Documentation</a>
+    <span style="margin-left:auto; color:#6e6c63; font-size:10px;">v0.1.0-alpha · campus → building → floor</span>
+  </rune-marquee>
+
+  <!-- ───────── CAMPUS 1: Operations ───────── -->
+  <rune-campus id="ops">
+
+    <!-- Building 1.1: Supervisors -->
+    <rune-building id="supervisors" label="Supervisors">
+
+      <!-- SUB-MARQUEE: building switcher (within Operations campus) -->
+      <rune-marquee scope="building" data-variant="sub">
+        <a href="#ops/supervisors">Supervisors</a>
+        <span style="color:#3a3f3a;">·</span>
+        <a href="#ops/fleet">Fleet</a>
+        <span style="margin-left:auto; color:#6e6c63;">campus: Operations</span>
+      </rune-marquee>
+
+      <rune-elevator></rune-elevator>
+
+      <rune-floor id="active" label="Active shift" data-level="L1" columns="6" cell-height="100px" gap="14px">
+        <rune-room id="memory" position="0,0" size="3,2"
+                   label="memory.ex" state-class="warm"
+                   anchor="lib/forge/memory.ex:24">
+          <strong>memory.ex</strong>
+          <div class="room-body">graphonomous supervisor · κ=0.5 · advise mode</div>
+        </rune-room>
+        <rune-room id="reason" position="3,0" size="3,1"
+                   label="reason.ex"
+                   anchor="lib/forge/reason.ex">
+          <strong>reason.ex</strong>
+          <div class="room-body">deliberatic warden · 2 deliberations open</div>
+        </rune-room>
+        <rune-room id="pulse" position="3,1" size="3,1"
+                   label="pulse.ex" state-class="warm"
+                   anchor="lib/forge/pulse.ex">
+          <strong>pulse.ex</strong>
+          <div class="room-body">cadence ✓ · 5s tick</div>
+        </rune-room>
+        <rune-room id="deploy" position="0,2" size="3,1"
+                   label="deploy.ex" state-class="hot"
+                   anchor="lib/forge/deploy.ex">
+          <strong>deploy.ex</strong>
+          <div class="room-body">webhost steward · rolling 3/7 nodes</div>
+        </rune-room>
+        <rune-room id="geo" position="3,2" size="2,1"
+                   label="geo.ex" state-class="fault"
+                   anchor="lib/forge/geo.ex">
+          <strong>⚠ geo.ex</strong>
+          <div class="room-body">restart 4× · advice: bump timeout</div>
+        </rune-room>
+        <rune-room id="archivist" position="5,2" size="1,1"
+                   label="archivist" state-class="idle"
+                   anchor="lib/forge/archivist.ex">
+          <strong>archivist</strong>
+          <div class="room-body">on call</div>
+        </rune-room>
+      </rune-floor>
+
+      <rune-floor id="history" label="Shift history" data-level="L2" columns="3" cell-height="100px" gap="14px">
+        <rune-room id="shift-0341" position="0,0" size="1,1" label="0341" state-class="warm" anchor="logs/shift-0341.log">
+          <strong>shift 0341</strong>
+          <div class="room-body">11d 04h · 1 fault · resolved</div>
+        </rune-room>
+        <rune-room id="shift-0340" position="1,0" size="1,1" label="0340" state-class="warm" anchor="logs/shift-0340.log">
+          <strong>shift 0340</strong>
+          <div class="room-body">11d 18h · 0 faults</div>
+        </rune-room>
+        <rune-room id="shift-0339" position="2,0" size="1,1" label="0339" state-class="warm" anchor="logs/shift-0339.log">
+          <strong>shift 0339</strong>
+          <div class="room-body">12d 02h · 0 faults</div>
+        </rune-room>
+        <rune-room id="shift-0338" position="0,1" size="3,1" label="summary" state-class="cold" anchor="logs/summary.txt">
+          <strong>quarter summary</strong>
+          <div class="room-body">87 shifts · 3 faults · 2 deploys/wk avg · 99.94% uptime</div>
+        </rune-room>
+      </rune-floor>
+
+      <rune-floor id="alerts" label="Alerts" data-level="L3" columns="2" cell-height="120px" gap="14px">
+        <rune-room id="alert-geo" position="0,0" size="1,1" label="geo restart" state-class="fault" anchor="alerts/geo-restart.md">
+          <strong>⚠ geo restart x4</strong>
+          <div class="room-body">since 03:14 · advice: bump timeout 5s → 8s · awaiting ratification</div>
+        </rune-room>
+        <rune-room id="alert-deploy" position="1,0" size="1,1" label="deploy in progress" state-class="hot" anchor="alerts/deploy-progress.md">
+          <strong>deploy 3/7</strong>
+          <div class="room-body">est. 04:18 to complete · blue/green holding</div>
+        </rune-room>
+      </rune-floor>
+    </rune-building>
+
+    <!-- Building 1.2: Fleet -->
+    <rune-building id="fleet" label="Server fleet">
+      <rune-marquee scope="building" data-variant="sub">
+        <a href="#ops/supervisors">Supervisors</a>
+        <span style="color:#3a3f3a;">·</span>
+        <a href="#ops/fleet">Fleet</a>
+        <span style="margin-left:auto; color:#6e6c63;">campus: Operations</span>
+      </rune-marquee>
+
+      <rune-elevator></rune-elevator>
+
+      <rune-floor id="regions" label="Regions" data-level="L1" columns="4" cell-height="90px" gap="10px">
+        <rune-room id="us-east" position="0,0" size="2,1" label="us-east-1" state-class="warm" anchor="config/regions/us_east_1.exs">
+          <strong>us-east-1</strong>
+          <div class="room-body">12 nodes · 14ms p99 · healthy</div>
+        </rune-room>
+        <rune-room id="us-west" position="2,0" size="2,1" label="us-west-2" state-class="warm" anchor="config/regions/us_west_2.exs">
+          <strong>us-west-2</strong>
+          <div class="room-body">8 nodes · 18ms p99 · healthy</div>
+        </rune-room>
+        <rune-room id="eu-west" position="0,1" size="2,1" label="eu-west-1" state-class="hot" anchor="config/regions/eu_west_1.exs">
+          <strong>eu-west-1</strong>
+          <div class="room-body">14 nodes · 47ms p99 · degraded</div>
+        </rune-room>
+        <rune-room id="ap-south" position="2,1" size="2,1" label="ap-south-1" state-class="cold" anchor="config/regions/ap_south_1.exs">
+          <strong>ap-south-1</strong>
+          <div class="room-body">3 nodes · provisioning</div>
+        </rune-room>
+      </rune-floor>
+
+      <rune-floor id="edge" label="Edge & DB" data-level="L2" columns="2" cell-height="120px" gap="14px">
+        <rune-room id="cdn" position="0,0" size="1,1" label="CDN edges" state-class="warm" anchor="config/cdn.exs">
+          <strong>cdn edges</strong>
+          <div class="room-body">186 PoPs · cache hit 91.2%</div>
+        </rune-room>
+        <rune-room id="db" position="1,0" size="1,1" label="primary DB" state-class="hot" anchor="config/db.exs">
+          <strong>primary db</strong>
+          <div class="room-body">writer 84% cap · replica lag 1.2s</div>
+        </rune-room>
+      </rune-floor>
+    </rune-building>
+
+  </rune-campus>
+
+  <!-- ───────── CAMPUS 2: Documentation ───────── -->
+  <rune-campus id="docs">
+
+    <!-- Building 2.1: Spec -->
+    <rune-building id="spec" label="Spec">
+      <rune-marquee scope="building" data-variant="sub">
+        <a href="#docs/spec">Spec</a>
+        <span style="color:#3a3f3a;">·</span>
+        <a href="#docs/examples">Examples</a>
+        <span style="margin-left:auto; color:#6e6c63;">campus: Documentation</span>
+      </rune-marquee>
+
+      <rune-elevator></rune-elevator>
+
+      <rune-floor id="protocol" label="Protocol" data-level="L1" columns="3" cell-height="120px" gap="14px">
+        <rune-room id="prim-room" position="0,0" size="1,1" label="room" anchor="docs/spec/runefort.protocol.md:60">
+          <strong>room</strong>
+          <div class="room-body">a tile in the grid</div>
+        </rune-room>
+        <rune-room id="prim-claim" position="1,0" size="1,1" label="claim" anchor="docs/spec/runefort.protocol.md:75">
+          <strong>claim</strong>
+          <div class="room-body">file-system region a room owns</div>
+        </rune-room>
+        <rune-room id="prim-link" position="2,0" size="1,1" label="link" anchor="docs/spec/runefort.protocol.md:90">
+          <strong>link</strong>
+          <div class="room-body">adjacency for keyboard nav</div>
+        </rune-room>
+        <rune-room id="prim-bind" position="0,1" size="3,1" label="state binding" state-class="warm" anchor="docs/spec/runefort.protocol.md:100">
+          <strong>state binding</strong>
+          <div class="room-body">how live state colors a tile (cold · warm · hot · fault · idle)</div>
+        </rune-room>
+      </rune-floor>
+
+      <rune-floor id="elements" label="Elements" data-level="L2" columns="3" cell-height="100px" gap="14px">
+        <rune-room id="el-floor" position="0,0" size="1,1" label="rune-floor" anchor="docs/spec/runefort.core.md:20">
+          <strong>&lt;rune-floor&gt;</strong>
+          <div class="room-body">grid container</div>
+        </rune-room>
+        <rune-room id="el-room" position="1,0" size="1,1" label="rune-room" anchor="docs/spec/runefort.core.md:60">
+          <strong>&lt;rune-room&gt;</strong>
+          <div class="room-body">a tile</div>
+        </rune-room>
+        <rune-room id="el-editor" position="2,0" size="1,1" label="rune-editor" state-class="warm" anchor="docs/spec/runefort.core.md:160">
+          <strong>&lt;rune-editor&gt;</strong>
+          <div class="room-body">in-browser source viewer</div>
+        </rune-room>
+        <rune-room id="el-campus" position="0,1" size="1,1" label="rune-campus" state-class="hot" anchor="docs/spec/runefort.core.md:280">
+          <strong>&lt;rune-campus&gt;</strong>
+          <div class="room-body">NEW · top-level container</div>
+        </rune-room>
+        <rune-room id="el-building" position="1,1" size="1,1" label="rune-building" anchor="docs/spec/runefort.core.md:230">
+          <strong>&lt;rune-building&gt;</strong>
+          <div class="room-body">multi-floor container</div>
+        </rune-room>
+        <rune-room id="el-elevator" position="2,1" size="1,1" label="rune-elevator" anchor="docs/spec/runefort.core.md:250">
+          <strong>&lt;rune-elevator&gt;</strong>
+          <div class="room-body">floor sidebar</div>
+        </rune-room>
+      </rune-floor>
+    </rune-building>
+
+    <!-- Building 2.2: Examples -->
+    <rune-building id="examples" label="Examples">
+      <rune-marquee scope="building" data-variant="sub">
+        <a href="#docs/spec">Spec</a>
+        <span style="color:#3a3f3a;">·</span>
+        <a href="#docs/examples">Examples</a>
+        <span style="margin-left:auto; color:#6e6c63;">campus: Documentation</span>
+      </rune-marquee>
+
+      <rune-elevator></rune-elevator>
+
+      <rune-floor id="hello" label="Hello world" data-level="L1" columns="2" cell-height="120px" gap="14px">
+        <rune-room id="ex-no-build" position="0,0" size="1,1" label="no build" state-class="warm" anchor="examples/no-framework/index.html">
+          <strong>no-framework/</strong>
+          <div class="room-body">single floor + editor · no npm · CDN drop-in</div>
+        </rune-room>
+        <rune-room id="ex-multi" position="1,0" size="1,1" label="multi-floor" state-class="hot" anchor="examples/multi-floor/index.html">
+          <strong>multi-floor/</strong>
+          <div class="room-body">campus → building → floor (this page)</div>
+        </rune-room>
+      </rune-floor>
+    </rune-building>
+
+  </rune-campus>
+
+  <!-- Editors per building (each catches rune:open from rooms in its building) -->
+  <!-- Hoisted out via JS at runtime — placeholder marker -->
+
+  <script type="module">
+    import "/packages/core/src/index.js";
+
+    // One editor mounted per building — bind it to the building id so it
+    // catches rune:open from all rooms inside.
+    const editorSourcesHTML = `
+      <rune-source for="lib/forge/memory.ex:24" language="elixir" data-source='defmodule MyApp.Forge.Memory do
+  use Runefort.SupervisorAgent, autonomy: :advise
+  capabilities [&memory(:graphonomous)]
+  claim_region ~r{lib/my_app/memory/}
+  on_signal :topology_context, do: &deliberate/1
+end'></rune-source>
+      <rune-source for="lib/forge/reason.ex" language="elixir" data-source='defmodule MyApp.Forge.Reason do
+  use Runefort.SupervisorAgent, autonomy: :advise
+  # 2 deliberations open
+end'></rune-source>
+      <rune-source for="lib/forge/pulse.ex" language="elixir" data-source='defmodule MyApp.Forge.Pulse do
+  use Runefort.SupervisorAgent
+  cadence "5s"
+end'></rune-source>
+      <rune-source for="lib/forge/deploy.ex" language="elixir" data-source='defmodule MyApp.Forge.Deploy do
+  use Runefort.SupervisorAgent, autonomy: :act
+  def handle_signal(:deploy_request, state) do
+    WebHost.rollout(state, :blue_green)
+  end
+end'></rune-source>
+      <rune-source for="lib/forge/geo.ex" language="elixir" data-source='defmodule MyApp.Forge.Geo do
+  use Runefort.SupervisorAgent, autonomy: :advise
+  # advice: bump partition timeout to 8s
+  def partition_heal(state) do
+    GeoFleetic.merge(state, timeout: 5_000)  # ← suspected culprit
+  end
+end'></rune-source>
+      <rune-source for="lib/forge/archivist.ex" language="elixir" data-source='defmodule MyApp.Forge.Archivist do
+  use Runefort.SupervisorAgent
+  cadence "@nightly"
+end'></rune-source>
+      <rune-source for="logs/shift-0341.log" language="text" data-source='shift 0341 · 11d 04h on shift
+03:14:22  forge.geo · partition heal failed · advice issued
+03:13:08  forge.memory · κ exceeded threshold
+03:11:54  forge.memory · consolidated 47 nodes
+03:08:31  forge.deploy · rollout 3/7 nodes
+03:06:17  forge.reason · deliberation #208 sealed'></rune-source>
+      <rune-source for="logs/summary.txt" language="text" data-source='Quarter summary · last 87 shifts
+
+uptime           99.94%
+faults           3 (all auto-resolved)
+deploys          24 (avg 2/wk)
+median p99       16ms
+worst p99        47ms (eu-west-1, 2026-04-22)
+
+advice ratification rate: 88%
+auto-act success rate:    97%'></rune-source>
+      <rune-source for="alerts/geo-restart.md" language="text" data-source='# alert: forge.geo restart x4
+
+opened   03:14:22
+state    AWAITING RATIFICATION
+
+hypothesis: partition timeout (5s) is too tight for current
+network latency. supervisor proposes increasing to 8s.
+
+evidence: 4 consecutive restarts at sub-100ms intervals after
+each merge attempt. pre-incident merges all completed within
+2.4-4.1s.
+
+ratify [y/n]'></rune-source>
+      <rune-source for="alerts/deploy-progress.md" language="text" data-source='# deploy progress · rolling
+
+3 of 7 nodes shifted to new build
+strategy: blue/green
+signed telemetry: green across all shifted nodes
+
+est. complete: 04:18 (~14 min)
+
+if rollback needed: <1 min · all blue capacity warm'></rune-source>
+      <rune-source for="config/regions/us_east_1.exs" language="elixir" data-source='import Config
+
+config :myapp, :region_us_east_1,
+  capacity: 12,
+  p99_target_ms: 25,
+  current_p99_ms: 14,
+  status: :healthy'></rune-source>
+      <rune-source for="config/regions/us_west_2.exs" language="elixir" data-source='import Config
+
+config :myapp, :region_us_west_2,
+  capacity: 8,
+  current_p99_ms: 18,
+  status: :healthy'></rune-source>
+      <rune-source for="config/regions/eu_west_1.exs" language="elixir" data-source='import Config
+
+# DEGRADED — p99 over budget
+config :myapp, :region_eu_west_1,
+  capacity: 14,
+  p99_target_ms: 25,
+  current_p99_ms: 47,   # ← above budget
+  status: :degraded'></rune-source>
+      <rune-source for="config/regions/ap_south_1.exs" language="elixir" data-source='import Config
+
+config :myapp, :region_ap_south_1,
+  capacity: 3,
+  status: :provisioning,
+  eta: "2026-05-01"'></rune-source>
+      <rune-source for="config/cdn.exs" language="elixir" data-source='import Config
+
+config :myapp, :cdn,
+  pop_count: 186,
+  cache_hit_rate: 0.912,
+  status: :healthy'></rune-source>
+      <rune-source for="config/db.exs" language="elixir" data-source='import Config
+
+# HOT — primary near write capacity
+config :myapp, :db,
+  writer_capacity_pct: 0.84,
+  replica_lag_seconds: 1.2,
+  status: :hot'></rune-source>
+      <rune-source for="docs/spec/runefort.protocol.md:60" language="text" data-source='## §2.1 Room
+
+A room is a tile in the grid. It has an id, a position, a
+size, and arbitrary metadata.
+
+{
+  "id": "memory",
+  "position": [0, 0],
+  "size": [3, 2],
+  "label": "memory.ex",
+  "meta": {}
+}
+
+position and size are integer cell coordinates in CSS grid.
+[0,0] is top-left.'></rune-source>
+      <rune-source for="docs/spec/runefort.protocol.md:75" language="text" data-source='## §2.2 Claim
+
+A claim is a file-system region a room "owns". A renderer
+uses claims to (a) list which files belong to a room,
+(b) generate file-handoff URLs.
+
+{
+  "room": "memory",
+  "pattern": "lib/my_app/memory/**/*.ex",
+  "anchor": "lib/my_app/forge/memory.ex#L24"
+}'></rune-source>
+      <rune-source for="docs/spec/runefort.protocol.md:90" language="text" data-source='## §2.3 Neighbor (Link)
+
+A neighbor declares an adjacency between two rooms. Drives
+keyboard navigation (h/j/k/l), focus order, and may render
+as connecting lines.
+
+{ "from": "memory", "to": "deploy", "kind": "adjacent" }'></rune-source>
+      <rune-source for="docs/spec/runefort.protocol.md:100" language="text" data-source='## §2.4 State binding
+
+How runtime state colors a tile.
+
+{
+  "room": "memory",
+  "signal": "kappa",
+  "thresholds": [
+    { "if": "< 0.3", "class": "cold" },
+    { "if": "< 0.6", "class": "warm" },
+    { "if": ">= 0.6", "class": "hot" }
+  ]
+}
+
+Reserved canonical classes: cold · warm · hot · fault · idle'></rune-source>
+      <rune-source for="docs/spec/runefort.core.md:20" language="text" data-source='## <rune-floor>
+
+The grid container. Establishes a CSS grid using "columns"
+and "cell-height" attributes. Owns signal state (this.signals)
+and binding evaluation (this.bindings).'></rune-source>
+      <rune-source for="docs/spec/runefort.core.md:60" language="text" data-source='## <rune-room>
+
+A tile inside <rune-floor>. Required attributes:
+  id, position ("col,row"), size ("colspan,rowspan")
+
+Optional: label, anchor, state-class
+
+Events: rune:open, rune:focus, rune:state'></rune-source>
+      <rune-source for="docs/spec/runefort.core.md:160" language="text" data-source='## <rune-editor>
+
+In-browser source viewer. Pairs with a building or floor via
+the "for=" attribute. Listens for rune:open events, intercepts
+the default action, renders source for the matched anchor.
+
+If window.hljs (highlight.js) is present, syntax highlighting
+applies automatically.'></rune-source>
+      <rune-source for="docs/spec/runefort.core.md:230" language="text" data-source='## <rune-building>
+
+Multi-floor container. Manages active floor, syncs URL hash.
+
+Hash routing modes:
+  Standalone:    #floor-id
+  In campus:     #campus/building/floor
+
+In switch mode (default), only the active floor renders.
+In scroll mode (v0.2), floors stack and smooth-scroll.'></rune-source>
+      <rune-source for="docs/spec/runefort.core.md:250" language="text" data-source='## <rune-elevator>
+
+Vertical floor-switching sidebar. Auto-generates a list of
+all floors in the parent building. Highlights the active
+floor automatically. Supports keyboard navigation.
+
+Override mode: place authored <a> children to suppress
+auto-generation and use custom markup.'></rune-source>
+      <rune-source for="docs/spec/runefort.core.md:280" language="text" data-source='## <rune-campus>  (NEW in v0.1.x)
+
+Top-level container in the
+campus → building → floor → room hierarchy.
+
+Each campus is a tenant/org/app context. Multi-campus pages
+have multiple <rune-campus> siblings; only the active one
+displays. URL hash format becomes #campus/building/floor.
+
+Switch campus = clears building+floor to defaults.
+Switch building = clears floor to default.
+Switch floor = just floor.'></rune-source>
+      <rune-source for="examples/no-framework/index.html" language="text" data-source='&lt;!doctype html&gt;
+&lt;html&gt;&lt;head&gt;
+  &lt;script type="module" src="/packages/core/src/index.js"&gt;&lt;/script&gt;
+  &lt;link rel="stylesheet" href="/packages/core/theme.css" /&gt;
+&lt;/head&gt;&lt;body&gt;
+  &lt;rune-floor columns="6" rows="2"&gt;
+    &lt;rune-room id="memory" position="0,0" size="3,2"
+               anchor="lib/forge/memory.ex:24"&gt;&lt;/rune-room&gt;
+    &lt;rune-room id="deploy" position="3,0" size="3,2"
+               anchor="lib/forge/deploy.ex"&gt;&lt;/rune-room&gt;
+  &lt;/rune-floor&gt;
+&lt;/body&gt;&lt;/html&gt;'></rune-source>
+      <rune-source for="examples/multi-floor/index.html" language="text" data-source='<!doctype html>
+<html><head>...</head>
+<body data-theme="foundry">
+
+  <rune-marquee scope="campus">
+    <a href="#ops">Operations</a>
+    <a href="#docs">Documentation</a>
+  </rune-marquee>
+
+  <rune-campus id="ops">
+    <rune-building id="supervisors" label="Supervisors">
+      <rune-marquee scope="building"> ... </rune-marquee>
+      <rune-elevator></rune-elevator>
+      <rune-floor id="active"> ... </rune-floor>
+      <rune-floor id="history"> ... </rune-floor>
+    </rune-building>
+    <rune-building id="fleet" label="Fleet"> ... </rune-building>
+  </rune-campus>
+
+  <rune-campus id="docs"> ... </rune-campus>
+
+</body></html>'></rune-source>
+    `;
+
+    // Mount one editor per building. Each editor binds to its building so
+    // rune:open from any of that building's floors → renders source here.
+    document.querySelectorAll("rune-building").forEach((building) => {
+      const ed = document.createElement("rune-editor");
+      ed.setAttribute("for", building.id);
+      ed.innerHTML = editorSourcesHTML;
+      building.appendChild(ed);
+    });
+
+    // Listen on body so we catch all hierarchy events
+    document.body.addEventListener("rune:campus", (e) => {
+      console.log(`[campus] ${e.detail.id} active=${e.detail.active}`);
+    });
+    document.body.addEventListener("rune:building", (e) => {
+      console.log(`[building] ${e.detail.from || "(none)"} → ${e.detail.to}`);
+    });
+    document.body.addEventListener("rune:floor", (e) => {
+      console.log(`[floor] ${e.detail.from || "(none)"} → ${e.detail.to}`);
+    });
+
+    // Initial editor preload
+    queueMicrotask(() => {
+      document.querySelectorAll("rune-editor").forEach((ed) => {
+        ed.show("lib/forge/memory.ex:24");
+      });
+    });
+  </script>
+
+</body>
+</html>

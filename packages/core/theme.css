@@ -1,0 +1,827 @@
+/* @runefort/core — default theme.
+ * Lightweight, neutral, monochrome. Override with custom properties or
+ * write your own theme. The framework only requires a visible focus ring
+ * and per-state visual differentiation.
+ *
+ * NOTE: theme variables live at :root so that ancestor themes (e.g. the
+ * foundry theme on <rune-building data-theme="foundry">) cascade correctly
+ * to descendants. Setting variables on rune-floor would override the
+ * inherited foundry values and break the cascade.
+ */
+
+:root {
+  --rune-cell-min-width: 0;
+  --rune-gap: 8px;
+
+  --rune-bg: #fafafa;
+  --rune-fg: #1a1a1a;
+  --rune-border: #d4d4d4;
+  --rune-focus: #2563eb;
+
+  --rune-color-cold: #94a3b8;
+  --rune-color-warm: #16a34a;
+  --rune-color-hot:  #ea580c;
+  --rune-color-fault: #dc2626;
+  --rune-color-idle: #9ca3af;
+}
+
+:where(rune-floor) {
+  display: grid;
+  background: var(--rune-bg);
+  color: var(--rune-fg);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+:where(rune-room) {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  color: var(--rune-fg);
+  border: 1px solid var(--rune-border);
+  border-radius: 4px;
+  padding: 12px 14px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+  min-width: 0;
+}
+
+:where(rune-room:hover) {
+  border-color: var(--rune-focus);
+}
+
+:where(rune-room.runefort-focused),
+:where(rune-room:focus-visible) {
+  border-color: var(--rune-focus);
+  box-shadow: 0 0 0 2px var(--rune-focus);
+}
+
+/* State classes — all reserved canonical states. */
+:where(rune-room.runefort-state-cold) {
+  border-left: 3px solid var(--rune-color-cold);
+}
+:where(rune-room.runefort-state-warm) {
+  border-left: 3px solid var(--rune-color-warm);
+}
+:where(rune-room.runefort-state-hot) {
+  border-left: 3px solid var(--rune-color-hot);
+}
+:where(rune-room.runefort-state-fault) {
+  border-left: 3px solid var(--rune-color-fault);
+}
+:where(rune-room.runefort-state-idle) {
+  border-left: 3px solid var(--rune-color-idle);
+  opacity: 0.7;
+}
+
+/* Claims, links, and sources are metadata — hidden by default. */
+:where(rune-claim),
+:where(rune-link),
+:where(rune-source) {
+  display: none;
+}
+
+/* ─── Editor (in-browser source viewer) ─── */
+:where(rune-editor) {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  color: var(--rune-fg);
+  border: 1px solid var(--rune-border);
+  border-radius: 4px;
+  overflow: hidden;
+  font-family: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  min-height: 200px;
+}
+
+:where(rune-editor .runefort-editor-header) {
+  padding: 8px 14px;
+  background: #f5f5f5;
+  border-bottom: 1px solid var(--rune-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+:where(rune-editor .runefort-editor-path) {
+  color: var(--rune-fg);
+}
+:where(rune-editor .runefort-editor-path-empty) {
+  color: var(--rune-color-cold);
+  font-style: italic;
+}
+:where(rune-editor .runefort-editor-line-ref) {
+  color: var(--rune-color-hot);
+}
+:where(rune-editor .runefort-editor-ro) {
+  margin-left: auto;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--rune-color-cold);
+  border: 1px solid var(--rune-border);
+  padding: 1px 6px;
+}
+
+:where(rune-editor .runefort-editor-body) {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+}
+
+:where(rune-editor .runefort-editor-pre) {
+  margin: 0;
+  padding: 12px 0;
+  line-height: 1.6;
+}
+
+:where(rune-editor .runefort-editor-row) {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 12px;
+  padding: 0;
+}
+
+:where(rune-editor .runefort-editor-ln) {
+  color: var(--rune-color-cold);
+  text-align: right;
+  padding-right: 6px;
+  border-right: 1px solid var(--rune-border);
+  user-select: none;
+  white-space: pre;
+}
+
+:where(rune-editor .runefort-editor-src) {
+  white-space: pre;
+  padding-right: 16px;
+  color: var(--rune-fg);
+}
+
+:where(rune-editor .runefort-editor-placeholder) {
+  padding: 32px;
+  text-align: center;
+  color: var(--rune-color-cold);
+  font-style: italic;
+}
+
+/* ─── Campus (top-level multi-building container) ─── */
+:where(rune-campus) {
+  display: block;
+  background: var(--rune-bg);
+  color: var(--rune-fg);
+}
+
+/* Only the active campus is visible — siblings are hidden */
+:where(rune-campus:not([data-active])) {
+  display: none;
+}
+
+/* ─── Building (multi-floor container) ─── */
+:where(rune-building) {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+  background: var(--rune-bg);
+  color: var(--rune-fg);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Inside a campus, only the active building is shown */
+:where(rune-campus rune-building:not([data-active])) {
+  display: none;
+}
+
+/* Marquees occupy a full row at the top, in author order */
+:where(rune-building > rune-marquee) {
+  grid-column: 1 / -1;
+}
+
+/* Elevator: left column, full remaining height */
+:where(rune-building > rune-elevator) {
+  grid-column: 1 / 2;
+  grid-row: 2 / -1;
+  border-right: 1px solid var(--rune-border);
+  background: var(--rune-bg);
+  overflow-y: auto;
+}
+
+/* Floors: right column. In switch mode, only the active one is shown. */
+:where(rune-building > rune-floor) {
+  grid-column: 2 / -1;
+  grid-row: 2 / -1;
+  align-self: start;
+}
+:where(rune-building[mode="switch"] > rune-floor) {
+  display: none;
+}
+:where(rune-building[mode="switch"] > rune-floor[data-active]) {
+  display: grid;
+}
+
+/* ─── Elevator ─── */
+:where(rune-elevator) {
+  display: block;
+  padding: 12px 0;
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+  font-size: 12px;
+}
+
+:where(rune-elevator .runefort-elevator-list) {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+:where(rune-elevator .runefort-elevator-item) {
+  margin: 0;
+  padding: 0;
+}
+
+:where(rune-elevator .runefort-elevator-link) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  color: var(--rune-fg);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
+}
+
+:where(rune-elevator .runefort-elevator-link:hover) {
+  background: rgba(0, 0, 0, 0.04);
+  border-left-color: var(--rune-color-cold);
+}
+
+:where(rune-elevator .runefort-elevator-item.runefort-elevator-active .runefort-elevator-link),
+:where(rune-elevator a.runefort-elevator-active) {
+  border-left-color: var(--rune-focus);
+  color: var(--rune-focus);
+  background: rgba(37, 99, 235, 0.06);
+}
+
+:where(rune-elevator .runefort-elevator-level) {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--rune-color-cold);
+  border: 1px solid var(--rune-border);
+  padding: 1px 6px;
+  min-width: 24px;
+  text-align: center;
+}
+
+:where(rune-elevator .runefort-elevator-label) {
+  flex: 1;
+}
+
+/* ─── Marquee (horizontal nav bar) ─── */
+:where(rune-marquee) {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 20px;
+  background: var(--rune-bg);
+  border-bottom: 1px solid var(--rune-border);
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+:where(rune-marquee a) {
+  color: var(--rune-fg);
+  text-decoration: none;
+  padding: 4px 0;
+  border-bottom: 1px solid transparent;
+  transition: color 100ms ease, border-color 100ms ease;
+}
+
+:where(rune-marquee a:hover) {
+  color: var(--rune-focus);
+}
+
+:where(rune-marquee a.runefort-marquee-active) {
+  color: var(--rune-focus);
+  border-bottom-color: var(--rune-focus);
+}
+
+/* ─── Modal ─── */
+:where(rune-modal) {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+:where(rune-modal[open]) {
+  display: flex;
+}
+:where(rune-modal .runefort-modal-backdrop) {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+}
+:where(rune-modal .runefort-modal-panel) {
+  position: relative;
+  background: var(--rune-bg);
+  color: var(--rune-fg);
+  border: 1px solid var(--rune-border);
+  min-width: 420px;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Wide variant — for content-detail modals with a split-panel body */
+:where(rune-modal[data-variant="wide"] .runefort-modal-panel) {
+  min-width: min(960px, 92vw);
+  max-width: 1200px;
+  width: 90vw;
+  height: 80vh;
+  max-height: 80vh;
+}
+:where(rune-modal[data-variant="wide"] .runefort-modal-body) {
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0;
+  overflow: hidden;
+}
+:where(rune-modal[data-variant="wide"] .modal-detail-left),
+:where(rune-modal[data-variant="wide"] .modal-detail-right) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+:where(rune-modal[data-variant="wide"] .modal-detail-left) {
+  border-right: 1px solid var(--rune-border);
+}
+:where(rune-modal[data-variant="wide"] .modal-detail-section-head) {
+  padding: 8px 14px;
+  background: var(--rune-bg);
+  border-bottom: 1px solid var(--rune-border);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rune-color-cold);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+:where(rune-modal[data-variant="wide"] .modal-detail-section-head .pill) {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border: 1px solid var(--rune-border);
+  color: var(--rune-color-idle);
+}
+:where(rune-modal[data-variant="wide"] .modal-detail-section-head .pill.warm) { color: var(--rune-color-warm); border-color: var(--rune-color-warm); }
+:where(rune-modal[data-variant="wide"] .modal-detail-section-head .pill.hot) { color: var(--rune-color-hot); border-color: var(--rune-color-hot); }
+:where(rune-modal[data-variant="wide"] .modal-detail-section-head .pill.fault) { color: var(--rune-color-fault); border-color: var(--rune-color-fault); }
+:where(rune-modal[data-variant="wide"] .modal-detail-section-head .pill.cold) { color: var(--rune-color-cold); border-color: var(--rune-color-cold); }
+:where(rune-modal[data-variant="wide"] .modal-detail-section-head .pill.idle) { color: var(--rune-color-idle); border-color: var(--rune-color-idle); }
+:where(rune-modal[data-variant="wide"] .modal-detail-code) {
+  flex: 1;
+  margin: 0;
+  padding: 14px 16px;
+  background: #0a0c0a;
+  color: var(--rune-fg);
+  font-family: ui-monospace, "JetBrains Mono", "Departure Mono", monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  overflow: auto;
+  white-space: pre;
+  border: none;
+}
+:where(rune-modal[data-variant="wide"] rune-thread) {
+  flex: 1;
+  border: none;
+  min-height: 0;
+}
+:where(rune-modal[data-variant="wide"] .modal-detail-actions) {
+  padding: 8px 14px;
+  border-top: 1px solid var(--rune-border);
+  display: flex;
+  gap: 8px;
+  background: var(--rune-bg);
+}
+:where(rune-modal[data-variant="wide"] .modal-detail-actions button) {
+  font-size: 10px;
+}
+:where(rune-modal .runefort-modal-header) {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rune-border);
+}
+:where(rune-modal .runefort-modal-title) {
+  flex: 1;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rune-color-idle);
+}
+:where(rune-modal .runefort-modal-close) {
+  background: transparent;
+  border: none;
+  color: var(--rune-color-cold);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+:where(rune-modal .runefort-modal-close:hover) {
+  color: var(--rune-color-hot);
+}
+:where(rune-modal .runefort-modal-body) {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Forms inside modals */
+:where(rune-modal label) {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rune-color-cold);
+  margin: 12px 0 4px;
+}
+:where(rune-modal input[type="text"]),
+:where(rune-modal input[type="password"]),
+:where(rune-modal input[type="number"]),
+:where(rune-modal select),
+:where(rune-modal textarea) {
+  width: 100%;
+  background: var(--rune-bg);
+  color: var(--rune-fg);
+  border: 1px solid var(--rune-border);
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+}
+:where(rune-modal input:focus),
+:where(rune-modal select:focus),
+:where(rune-modal textarea:focus) {
+  outline: none;
+  border-color: var(--rune-focus);
+}
+:where(rune-modal .modal-actions) {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rune-border);
+}
+:where(rune-modal button) {
+  background: transparent;
+  color: var(--rune-fg);
+  border: 1px solid var(--rune-border);
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+}
+:where(rune-modal button[type="submit"]),
+:where(rune-modal button.primary) {
+  background: var(--rune-color-warm);
+  color: var(--rune-bg);
+  border-color: var(--rune-color-warm);
+}
+:where(rune-modal button:hover) {
+  border-color: var(--rune-focus);
+  color: var(--rune-focus);
+}
+:where(rune-modal small),
+:where(rune-modal .hint) {
+  display: block;
+  font-size: 10px;
+  color: var(--rune-color-cold);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+/* ─── Thread ─── */
+:where(rune-thread) {
+  display: flex;
+  flex-direction: column;
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+  font-size: 12px;
+  background: var(--rune-bg);
+  color: var(--rune-fg);
+  border: 1px solid var(--rune-border);
+  min-height: 200px;
+  max-height: 100%;
+}
+:where(rune-thread .runefort-thread-list) {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+:where(rune-thread .runefort-thread-empty) {
+  color: var(--rune-color-cold);
+  font-style: italic;
+  padding: 16px;
+  text-align: center;
+}
+:where(rune-thread .runefort-message) {
+  padding: 10px 0;
+  margin-left: calc(var(--depth, 0) * 16px);
+  border-left: 2px solid transparent;
+  padding-left: 8px;
+}
+:where(rune-thread .runefort-role-user) {
+  border-left-color: var(--rune-color-warm);
+}
+:where(rune-thread .runefort-role-assistant) {
+  border-left-color: var(--rune-color-hot);
+}
+:where(rune-thread .runefort-role-system) {
+  border-left-color: var(--rune-color-cold);
+  opacity: 0.7;
+}
+:where(rune-thread .runefort-message-meta) {
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rune-color-cold);
+  margin-bottom: 4px;
+}
+:where(rune-thread .runefort-message-content) {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.55;
+}
+:where(rune-thread .runefort-message-replies) {
+  margin-top: 6px;
+}
+:where(rune-thread .runefort-thread-input) {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--rune-border);
+  background: var(--rune-bg);
+}
+:where(rune-thread .runefort-thread-input textarea) {
+  flex: 1;
+  background: var(--rune-bg);
+  color: var(--rune-fg);
+  border: 1px solid var(--rune-border);
+  padding: 8px;
+  font: inherit;
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+  resize: vertical;
+  min-height: 40px;
+}
+:where(rune-thread .runefort-thread-input button) {
+  background: var(--rune-color-warm);
+  color: var(--rune-bg);
+  border: none;
+  padding: 8px 16px;
+  font: inherit;
+  font-family: inherit;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+:where(rune-thread .runefort-thread-input button:hover) {
+  background: var(--rune-color-hot);
+}
+:where(rune-static-message),
+:where(rune-message) { display: none; }
+
+/* ─── Action ─── */
+:where(rune-action) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--rune-fg);
+  border: 1px solid var(--rune-border);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+  transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+}
+:where(rune-action:hover),
+:where(rune-action:focus-visible) {
+  background: var(--rune-bg);
+  border-color: var(--rune-focus);
+  color: var(--rune-focus);
+  outline: none;
+}
+:where(rune-action[aria-disabled="true"]) {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+:where(rune-action .runefort-action-icon) {
+  font-size: 14px;
+  line-height: 1;
+  color: var(--rune-color-hot);
+}
+
+/* ─── Room kinds: YouTube ─── */
+:where(rune-room[data-kind="youtube"]) {
+  padding: 0;
+  overflow: hidden;
+}
+:where(rune-room[data-kind="youtube"] .rune-yt) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+}
+:where(rune-room[data-kind="youtube"] .rune-yt-thumb) {
+  flex: 1;
+  min-height: 96px;
+  background-color: #000;
+  background-size: cover;
+  background-position: center;
+  display: grid;
+  place-items: center;
+  position: relative;
+  text-decoration: none;
+}
+:where(rune-room[data-kind="youtube"] .rune-yt-thumb::after) {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%);
+}
+:where(rune-room[data-kind="youtube"] .rune-yt-play) {
+  position: relative;
+  z-index: 1;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: rgba(255,0,0,0.9);
+  color: white;
+  display: grid; place-items: center;
+  font-size: 14px;
+  padding-left: 3px;
+}
+:where(rune-room[data-kind="youtube"] .rune-yt-title) {
+  display: block;
+  padding: 8px 12px 2px;
+  color: var(--rune-fg);
+}
+:where(rune-room[data-kind="youtube"] .rune-yt-body) {
+  padding: 0 12px 10px;
+}
+:where(rune-room[data-kind="youtube"] .rune-yt-thumb-fallback) {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+}
+:where(rune-room[data-kind="youtube"] .rune-yt-fallback-note) {
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rune-color-cold);
+}
+/* Cursor + hover affordance for the click-to-play thumbnail */
+:where(rune-room[data-kind="youtube"] .rune-yt-thumb) {
+  cursor: pointer;
+}
+:where(rune-room[data-kind="youtube"] .rune-yt-thumb:hover .rune-yt-play) {
+  background: rgba(255, 0, 0, 1);
+  transform: scale(1.08);
+}
+:where(rune-room[data-kind="youtube"] .rune-yt-play) {
+  transition: transform 120ms ease, background 120ms ease;
+}
+/* Inline iframe player (replaces thumb on click) */
+:where(rune-room[data-kind="youtube"] .rune-yt-iframe) {
+  flex: 1;
+  width: 100%;
+  min-height: 96px;
+  border: 0;
+  background: #000;
+  display: block;
+}
+
+/* ─── Room kinds: [&] capability ─── */
+:where(rune-room[data-kind="ampersand"]) {
+  background: linear-gradient(135deg, var(--rune-bg) 0%, rgba(127,184,80,0.04) 100%);
+}
+:where(rune-room[data-kind="ampersand"] .rune-amp-composition) {
+  display: block;
+  font-family: ui-monospace, "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--rune-color-warm);
+  margin: 6px 0;
+  padding: 4px 6px;
+  background: rgba(127,184,80,0.06);
+  border-left: 2px solid var(--rune-color-warm);
+  word-break: break-word;
+}
+
+/* ─── Room kinds: metric ─── */
+:where(rune-room[data-kind="metric"]) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+:where(rune-room[data-kind="metric"] .rune-metric-value) {
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--rune-fg);
+  line-height: 1;
+  margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+}
+:where(rune-room[data-kind="metric"] .rune-metric-unit) {
+  font-size: 12px;
+  color: var(--rune-color-cold);
+  margin-left: 4px;
+}
+:where(rune-room[data-kind="metric"] .rune-metric-trend) {
+  margin-left: 6px;
+  font-size: 14px;
+}
+:where(rune-room[data-kind="metric"] .rune-metric-trend-up) { color: var(--rune-color-warm); }
+:where(rune-room[data-kind="metric"] .rune-metric-trend-down) { color: var(--rune-color-fault); }
+:where(rune-room[data-kind="metric"] .rune-metric-trend-flat) { color: var(--rune-color-cold); }
+:where(rune-room[data-kind="metric"] .rune-metric-label) {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rune-color-cold);
+  font-weight: 400;
+}
+
+/* ─── Kind picker (in modals) ─── */
+:where(.kind-picker) {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+:where(.kind-picker label) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  background: var(--rune-bg);
+  border: 1px solid var(--rune-border);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--rune-fg);
+  margin: 0;
+  transition: border-color 100ms ease, background 100ms ease;
+}
+:where(.kind-picker label:hover) {
+  border-color: var(--rune-focus);
+}
+:where(.kind-picker label input) {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+:where(.kind-picker label:has(input:checked)) {
+  border-color: var(--rune-focus);
+  background: rgba(127, 184, 80, 0.06);
+  box-shadow: inset 0 0 0 1px var(--rune-focus);
+}
+:where(.kind-picker .kind-picker-head) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--rune-fg);
+}
+:where(.kind-picker .kind-picker-icon) {
+  color: var(--rune-color-hot);
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+}
+:where(.kind-picker .kind-picker-desc) {
+  font-size: 10px;
+  color: var(--rune-color-cold);
+  line-height: 1.4;
+}

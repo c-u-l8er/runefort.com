@@ -1,0 +1,246 @@
+/* @runefort/core — foundry theme.
+ * The dark, industrial look. Apply by setting data-theme="foundry" on ANY
+ * runefort element (the building, a floor, an editor, or even <body>).
+ * The cascade reaches all descendants automatically.
+ */
+
+/* ─── Root variables (apply at any themed ancestor) ─── */
+[data-theme="foundry"] {
+  --rune-gap: 14px;
+
+  --rune-bg: #141714;
+  --rune-fg: #e8e4d8;
+  --rune-border: #2a322a;
+  --rune-focus: #7fb850;
+
+  --rune-color-cold: #6e6c63;
+  --rune-color-warm: #7fb850;
+  --rune-color-hot:  #ff8a3d;
+  --rune-color-fault: #8b3a1c;
+  --rune-color-idle: #a8a59a;
+}
+
+/* ─── Campus shell ─── */
+:where(rune-campus[data-theme="foundry"]),
+:where([data-theme="foundry"] rune-campus) {
+  background: var(--rune-bg);
+  color: var(--rune-fg);
+  font-family: ui-monospace, "JetBrains Mono", "Departure Mono", monospace;
+}
+
+/* ─── Building shell ─── */
+:where(rune-building[data-theme="foundry"]),
+:where([data-theme="foundry"] rune-building) {
+  background: var(--rune-bg);
+  color: var(--rune-fg);
+  font-family: ui-monospace, "JetBrains Mono", "Departure Mono", monospace;
+}
+
+:where([data-theme="foundry"] rune-building) > rune-elevator,
+:where(rune-building[data-theme="foundry"]) > rune-elevator {
+  background: var(--rune-bg);
+  border-right: 1px solid var(--rune-border);
+}
+
+/* ─── Floor (single-floor or inside building) ─── */
+:where(rune-floor[data-theme="foundry"]),
+:where([data-theme="foundry"] rune-floor) {
+  background: var(--rune-bg);
+  color: var(--rune-fg);
+  font-family: ui-monospace, "JetBrains Mono", "Departure Mono", monospace;
+  padding: 18px;
+}
+
+/* ─── Rooms (the tiles themselves) ─── */
+:where([data-theme="foundry"]) rune-room {
+  background: #1c211c;
+  color: var(--rune-fg);
+  border: 1px solid var(--rune-border);
+  border-radius: 0;
+  padding: 14px 16px;
+  position: relative;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+:where([data-theme="foundry"]) rune-room::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--rune-color-cold);
+}
+
+:where([data-theme="foundry"]) rune-room.runefort-state-warm::before {
+  background: var(--rune-color-warm);
+}
+:where([data-theme="foundry"]) rune-room.runefort-state-hot::before {
+  background: var(--rune-color-hot);
+  box-shadow: 0 0 12px var(--rune-color-hot);
+}
+:where([data-theme="foundry"]) rune-room.runefort-state-fault::before {
+  background: var(--rune-color-fault);
+  box-shadow: 0 0 12px var(--rune-color-fault);
+}
+:where([data-theme="foundry"]) rune-room.runefort-state-idle::before {
+  background: var(--rune-color-idle);
+}
+
+:where([data-theme="foundry"]) rune-room.runefort-state-hot {
+  background: linear-gradient(135deg, #1c211c 0%, rgba(255, 138, 61, 0.08) 100%);
+  border-color: rgba(255, 138, 61, 0.35);
+}
+:where([data-theme="foundry"]) rune-room.runefort-state-fault {
+  background: linear-gradient(135deg, #1c211c 0%, rgba(139, 58, 28, 0.12) 100%);
+  border-color: rgba(187, 102, 68, 0.4);
+}
+
+:where([data-theme="foundry"]) rune-room:hover {
+  background: var(--rune-bg);
+  transform: translateY(-1px);
+}
+
+:where([data-theme="foundry"]) rune-room.runefort-focused,
+:where([data-theme="foundry"]) rune-room:focus-visible {
+  border-color: var(--rune-focus);
+  box-shadow: 0 0 0 1px var(--rune-focus), 0 0 16px rgba(127, 184, 80, 0.3);
+  outline: none;
+  background: var(--rune-bg);
+}
+
+/* ─── Elevator ─── */
+:where([data-theme="foundry"]) rune-elevator {
+  color: var(--rune-color-idle);
+}
+
+:where([data-theme="foundry"]) rune-elevator .runefort-elevator-link {
+  color: var(--rune-color-idle);
+  border-left-color: transparent;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 11px;
+  padding: 10px 18px;
+}
+
+:where([data-theme="foundry"]) rune-elevator .runefort-elevator-link:hover {
+  background: rgba(127, 184, 80, 0.04);
+  color: var(--rune-fg);
+  border-left-color: var(--rune-color-cold);
+}
+
+:where([data-theme="foundry"]) rune-elevator .runefort-elevator-item.runefort-elevator-active .runefort-elevator-link,
+:where([data-theme="foundry"]) rune-elevator a.runefort-elevator-active {
+  color: var(--rune-focus);
+  border-left-color: var(--rune-focus);
+  background: rgba(127, 184, 80, 0.08);
+  box-shadow: inset 0 0 12px rgba(127, 184, 80, 0.05);
+}
+
+:where([data-theme="foundry"]) rune-elevator .runefort-elevator-level {
+  color: var(--rune-color-cold);
+  border-color: var(--rune-border);
+  background: #1c211c;
+}
+
+/* ─── Marquee ─── */
+:where([data-theme="foundry"]) rune-marquee,
+:where(rune-marquee[data-theme="foundry"]) {
+  background: #141714;
+  border-bottom: 1px solid var(--rune-border);
+  color: var(--rune-color-idle);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 11px;
+  padding: 10px 24px;
+}
+
+:where([data-theme="foundry"]) rune-marquee a,
+:where(rune-marquee[data-theme="foundry"]) a {
+  color: var(--rune-color-idle);
+}
+
+:where([data-theme="foundry"]) rune-marquee a:hover {
+  color: var(--rune-color-hot);
+}
+
+:where([data-theme="foundry"]) rune-marquee a.runefort-marquee-active {
+  color: var(--rune-focus);
+  border-bottom-color: var(--rune-focus);
+}
+
+/* Sub-marquee variant — quieter palette */
+:where([data-theme="foundry"]) rune-marquee[data-variant="sub"] {
+  background: var(--rune-bg);
+  border-bottom-color: #1c211c;
+  font-size: 10px;
+  padding: 6px 24px;
+  color: var(--rune-color-cold);
+}
+
+/* ─── Editor (in-browser source viewer) ─── */
+:where(rune-editor[data-theme="foundry"]),
+:where([data-theme="foundry"]) rune-editor {
+  background: #0a0c0a;
+  color: var(--rune-fg);
+  border: 1px solid var(--rune-border);
+  border-radius: 0;
+  font-family: ui-monospace, "JetBrains Mono", "Departure Mono", monospace;
+}
+
+:where(rune-editor[data-theme="foundry"]) .runefort-editor-header,
+:where([data-theme="foundry"]) rune-editor .runefort-editor-header {
+  background: #141714;
+  border-bottom: 1px solid var(--rune-border);
+  color: var(--rune-color-idle);
+  padding: 10px 14px;
+  letter-spacing: 0.04em;
+}
+
+:where([data-theme="foundry"]) rune-editor .runefort-editor-path {
+  color: var(--rune-fg);
+}
+
+:where([data-theme="foundry"]) rune-editor .runefort-editor-line-ref {
+  color: var(--rune-color-hot);
+}
+
+:where([data-theme="foundry"]) rune-editor .runefort-editor-ro {
+  color: var(--rune-color-cold);
+  border-color: var(--rune-border);
+}
+
+:where([data-theme="foundry"]) rune-editor .runefort-editor-ln {
+  color: var(--rune-color-cold);
+  border-right: 1px solid var(--rune-border);
+}
+
+:where([data-theme="foundry"]) rune-editor .runefort-editor-src {
+  color: var(--rune-fg);
+}
+
+:where([data-theme="foundry"]) rune-editor .runefort-editor-placeholder {
+  color: var(--rune-color-cold);
+}
+
+/* highlight.js compatibility — phosphor accents */
+:where([data-theme="foundry"]) rune-editor .hljs-keyword,
+:where([data-theme="foundry"]) rune-editor .hljs-built_in {
+  color: var(--rune-color-hot);
+}
+:where([data-theme="foundry"]) rune-editor .hljs-string,
+:where([data-theme="foundry"]) rune-editor .hljs-symbol {
+  color: #ffd23f;
+}
+:where([data-theme="foundry"]) rune-editor .hljs-comment {
+  color: var(--rune-color-cold);
+  font-style: italic;
+}
+:where([data-theme="foundry"]) rune-editor .hljs-title,
+:where([data-theme="foundry"]) rune-editor .hljs-class {
+  color: #9fdb6a;
+}
+:where([data-theme="foundry"]) rune-editor .hljs-number,
+:where([data-theme="foundry"]) rune-editor .hljs-attr,
+:where([data-theme="foundry"]) rune-editor .hljs-meta {
+  color: var(--rune-color-warm);
+}

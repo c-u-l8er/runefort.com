@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "runefort-dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "name": "runefort-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8093"],
       "port": 8093
     }
   ]
