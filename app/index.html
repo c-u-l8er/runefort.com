@@ -10,11 +10,17 @@
         <link rel="stylesheet" href="/packages/core/theme.css" />
         <link rel="stylesheet" href="/packages/core/theme-foundry.css" />
 
-        <!-- Optional: site-local Supabase config. Create runefort-config.js in the
-       repo root with `window.RUNEFORT_SUPABASE = { url, anonKey };` to enable
-       cloud sync. The file is gitignored. If absent, runefort runs in
-       local-only mode (no auth, no sync, no public fort URLs). -->
-        <script src="/runefort-config.js" onerror="void 0"></script>
+        <!-- Site-local Supabase config. Default is null (local-only mode: no
+       auth, no sync, no public fort URLs). To enable cloud sync, override
+       window.RUNEFORT_SUPABASE before the runtime imports run, e.g.:
+         <script>
+           window.RUNEFORT_SUPABASE = { url: "...", anonKey: "..." };
+         </script>
+       For local dev, edit runefort-config.js (gitignored) and load it via
+       your dev server, or paste the inline block above. -->
+        <script>
+          window.RUNEFORT_SUPABASE = window.RUNEFORT_SUPABASE || null;
+        </script>
 
         <style>
             html,
