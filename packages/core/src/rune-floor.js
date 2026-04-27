@@ -183,9 +183,12 @@ export class RuneFloor extends HTMLElement {
     // Note: do NOT set `display` inline. The CSS theme owns it so that the
     // building can hide inactive floors in switch mode (a CSS rule cannot
     // override an inline style at the same specificity).
+    // Default column track keeps a sensible minimum so content doesn't squish
+    // to nothing on narrow viewports — instead the floor overflows horizontally
+    // and scrolls (see :where(rune-floor) in theme.css).
     this.style.gridTemplateColumns = cellWidth
       ? `repeat(${columns}, ${cellWidth})`
-      : `repeat(${columns}, minmax(0, 1fr))`;
+      : `repeat(${columns}, minmax(140px, 1fr))`;
     if (cellHeight) {
       this.style.gridAutoRows = cellHeight;
     }

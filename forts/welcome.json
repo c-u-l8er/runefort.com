@@ -1,0 +1,159 @@
+{
+  "$schema": "Runefort welcome / demo fort. Forkable. Loaded on first visit when the fort registry is empty.",
+  "id": "welcome",
+  "title": "Welcome to Runefort",
+  "vocabulary": "core",
+  "campus": {
+    "id": "welcome",
+    "label": "Welcome to Runefort",
+    "buildings": [
+      {
+        "id": "what-is-runefort",
+        "label": "What is Runefort?",
+        "floors": [
+          {
+            "id": "concept",
+            "label": "Concept",
+            "data_level": "L1",
+            "columns": 6,
+            "cell_height": "150px",
+            "gap": "14px",
+            "rooms": [
+              {
+                "id": "concept-tagline",
+                "position": [0, 0], "size": [6, 1],
+                "state_class": "warm",
+                "label": "A spatial authoring environment for tile-grid web apps.",
+                "body": "Declare rooms, claims, neighbors, and state bindings. The runtime compiles them into a CSS grid you can edit, refine, and run — all in the browser."
+              },
+              {
+                "id": "concept-rooms",
+                "position": [0, 1], "size": [3, 1],
+                "label": "rooms",
+                "body": "Tiles in the grid. Position, size, label, content. Click a tile to open it; refine it via LLM."
+              },
+              {
+                "id": "concept-claims",
+                "position": [3, 1], "size": [3, 1],
+                "label": "claims",
+                "body": "Optional file or content regions a room owns. View and edit them inline — no jumping to an external editor."
+              },
+              {
+                "id": "concept-neighbors",
+                "position": [0, 2], "size": [3, 1],
+                "label": "neighbors",
+                "body": "Adjacency between rooms. Drives keyboard nav (h/j/k/l) and connecting lines."
+              },
+              {
+                "id": "concept-bindings",
+                "position": [3, 2], "size": [3, 1],
+                "label": "state bindings",
+                "body": "How runtime signals color a tile. cold · warm · hot · fault · idle. Live updates without a reload."
+              }
+            ]
+          },
+          {
+            "id": "why",
+            "label": "Why a protocol",
+            "data_level": "L2",
+            "columns": 4,
+            "cell_height": "150px",
+            "gap": "14px",
+            "rooms": [
+              {
+                "id": "why-in-browser",
+                "position": [0, 0], "size": [2, 1],
+                "label": "edit in place",
+                "body": "Tile content opens inside the room. Author, refine, and inspect without leaving the page."
+              },
+              {
+                "id": "why-diffable",
+                "position": [2, 0], "size": [2, 1],
+                "label": "diffable",
+                "body": "Layouts live in version control as text. Reviews become readable. SVG graphs cannot do this."
+              },
+              {
+                "id": "why-extensible",
+                "position": [0, 1], "size": [2, 1],
+                "label": "extensible by composition",
+                "body": "Apps add vocabularies (supervisor, dashboard, wiki) on top of the four primitives. The protocol stays small."
+              },
+              {
+                "id": "why-no-engine",
+                "position": [2, 1], "size": [2, 1],
+                "label": "no runtime layout engine",
+                "body": "All layout is compile-time deterministic. No d3, no dagre, no jitter."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "getting-started",
+        "label": "Getting started",
+        "floors": [
+          {
+            "id": "setup",
+            "label": "Setup",
+            "data_level": "L1",
+            "columns": 6,
+            "cell_height": "140px",
+            "gap": "14px",
+            "rooms": [
+              {
+                "id": "step-1",
+                "position": [0, 0], "size": [2, 1],
+                "state_class": "warm",
+                "label": "1 · Fork this fort",
+                "body": "Click \u201cFork to start editing\u201d above. A copy lands in your local storage and you can edit it freely."
+              },
+              {
+                "id": "step-2",
+                "position": [2, 0], "size": [2, 1],
+                "label": "2 · Set API key",
+                "body": "Click \u2699 Settings, paste your OpenRouter key, save. Required to author with an LLM."
+              },
+              {
+                "id": "step-3",
+                "position": [4, 0], "size": [2, 1],
+                "label": "3 · Generate",
+                "body": "Click + room / + floor / + building / + campus to author. Click any tile and \u201crefine selected\u201d to iterate."
+              },
+              {
+                "id": "hotkeys",
+                "position": [0, 1], "size": [6, 1],
+                "state_class": "cold",
+                "label": "hotkeys",
+                "body": "Ctrl+Shift+R = + room  ·  F = + floor  ·  B = + building  ·  C = + campus  ·  E = refine"
+              }
+            ]
+          },
+          {
+            "id": "warnings",
+            "label": "Warnings",
+            "data_level": "L2",
+            "columns": 2,
+            "cell_height": "150px",
+            "gap": "14px",
+            "rooms": [
+              {
+                "id": "security",
+                "position": [0, 0], "size": [1, 1],
+                "state_class": "fault",
+                "label": "\u26a0 API key in localStorage",
+                "body": "Any script on this page can read it. Never use a shared kiosk. Sign in (coming soon) to use a server-proxied key instead."
+              },
+              {
+                "id": "cost",
+                "position": [1, 0], "size": [1, 1],
+                "state_class": "hot",
+                "label": "cost cap = $5",
+                "body": "Default budget. Adjust in Settings. Each generation \u2248 $0.005\u2013$0.05."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -66,10 +66,32 @@ export {
   campusFromJson,
   threadStore,
   entityStore,
+  fortStore,
   restoreEntities,
 } from "./runtime.js";
 export { parseAnchor, buildUrl } from "./editor-handoff.js";
 export { parseThreshold, classFor } from "./threshold.js";
+
+// Cloud sync (optional — requires window.RUNEFORT_SUPABASE config).
+export {
+  getSupabase,
+  isSupabaseConfigured,
+  signIn,
+  signUp,
+  signInWithMagicLink,
+  signInWithProvider,
+  resetPasswordForEmail,
+  signOut,
+  getSession,
+  getCurrentUser,
+  onAuthChange,
+  snapshotFortDocument,
+  pushFort,
+  pullFort,
+  listCloudForts,
+  loadPublicFort,
+  forkCloudFort,
+} from "./supabase.js";
 
 export const VERSION = "0.1.0-alpha.1";
 

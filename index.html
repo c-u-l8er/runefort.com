@@ -1,0 +1,1472 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>
+            Runefort — open protocol for AI-authored tile layouts (~5KB, BYOK)
+        </title>
+        <meta
+            name="description"
+            content="A small open protocol and ~5KB Web Component framework for tile-grid UIs with file-backed rooms, runtime state classes, and in-browser LLM authoring. Drop into any HTML page."
+        />
+        <link rel="canonical" href="https://runefort.com/" />
+
+        <!-- Open Graph / social -->
+        <meta property="og:type" content="website" />
+        <meta
+            property="og:title"
+            content="Runefort — open protocol for AI-authored tile layouts"
+        />
+        <meta
+            property="og:description"
+            content="Tile-grid UIs with file-backed rooms, runtime state classes, and in-browser LLM authoring. ~5KB. Drop into any HTML page."
+        />
+        <meta property="og:url" content="https://runefort.com/" />
+        <meta property="og:site_name" content="Runefort" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta
+            name="twitter:title"
+            content="Runefort — open protocol for AI-authored tile layouts"
+        />
+        <meta
+            name="twitter:description"
+            content="Tile-grid UIs with file-backed rooms, runtime state classes, and in-browser LLM authoring. ~5KB. Drop into any HTML page."
+        />
+
+        <!-- JSON-LD -->
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "SoftwareApplication",
+                "name": "Runefort",
+                "applicationCategory": "DeveloperApplication",
+                "operatingSystem": "Web",
+                "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "USD"
+                },
+                "description": "Open protocol and Web Component framework for tile-grid UI layouts with file-backed rooms, runtime state classes, and in-browser LLM authoring.",
+                "url": "https://runefort.com/"
+            }
+        </script>
+
+        <style>
+            :root {
+                /* Foundry palette — mirrors runefort.com/packages/core/theme.css /
+         theme-foundry.css so the marketing surface and the embedded editor
+         share one visual language. */
+                --bg: #0a0c0a;
+                --s1: #141714;
+                --s2: #1c211c;
+                --br: #2a322a;
+                --tx: #e8e4d8;
+                --tm: #a8a59a;
+                --td: #6e6c63;
+                --tw: #3a3f3a;
+                --ac: #7fb850;
+                --ac-h: #9fd870;
+                --ac-d: rgba(127, 184, 80, 0.1);
+                --ac-m: rgba(127, 184, 80, 0.3);
+                --warn: #ff8a3d;
+                --ff:
+                    ui-monospace, "JetBrains Mono", "SFMono-Regular", Menlo,
+                    Consolas, monospace;
+            }
+
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+            }
+            html {
+                scroll-behavior: smooth;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: var(--tx);
+                font-family: var(--ff);
+                font-size: 14px;
+                line-height: 1.55;
+                -webkit-font-smoothing: antialiased;
+                overflow-x: hidden;
+            }
+            a {
+                color: inherit;
+            }
+            code,
+            pre {
+                font-family: var(--ff);
+            }
+
+            /* ─────────── Layout helpers ─────────── */
+            .wrap {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 0 24px;
+            }
+            .section {
+                padding: 96px 0;
+                position: relative;
+            }
+            .section + .section {
+                border-top: 1px solid var(--br);
+            }
+            .section-label {
+                font-size: 11px;
+                letter-spacing: 0.04em;
+                color: var(--ac);
+                margin-bottom: 14px;
+            }
+            .section-label::before {
+                content: "› ";
+                color: var(--td);
+            }
+            .section-title {
+                font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+                font-weight: 500;
+                letter-spacing: -0.01em;
+                line-height: 1.15;
+                margin: 0 0 14px;
+                color: var(--tx);
+            }
+            .section-sub {
+                max-width: 720px;
+                color: var(--tm);
+                font-size: 0.95rem;
+                line-height: 1.65;
+                margin: 0 0 36px;
+            }
+
+            /* ─────────── Site nav (under amp-nav) ─────────── */
+            .site-nav {
+                position: sticky;
+                top: 0;
+                z-index: 50;
+                background: rgba(10, 12, 10, 0.92);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border-bottom: 1px solid var(--br);
+            }
+            .site-nav-inner {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 12px 24px;
+                display: flex;
+                align-items: center;
+                gap: 18px;
+            }
+            .brand {
+                color: var(--ac);
+                letter-spacing: 0.16em;
+                font-size: 12px;
+                font-weight: 500;
+                text-decoration: none;
+            }
+            .brand .rune {
+                margin-right: 6px;
+            }
+            .nav-links {
+                display: flex;
+                gap: 18px;
+                margin-left: 24px;
+            }
+            .nav-links a {
+                font-size: 11px;
+                letter-spacing: 0.06em;
+                color: var(--tm);
+                text-decoration: none;
+                transition: color 0.15s;
+            }
+            .nav-links a:hover {
+                color: var(--tx);
+            }
+            .nav-cta-wrap {
+                margin-left: auto;
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 7px 14px;
+                font: inherit;
+                font-size: 11px;
+                letter-spacing: 0.06em;
+                text-decoration: none;
+                border: 1px solid var(--br);
+                background: transparent;
+                color: var(--tx);
+                cursor: pointer;
+                transition:
+                    border-color 0.15s,
+                    color 0.15s,
+                    background 0.15s;
+            }
+            .btn:hover {
+                border-color: var(--ac);
+                color: var(--ac);
+            }
+            .btn-primary {
+                background: var(--ac);
+                border-color: var(--ac);
+                color: var(--bg);
+                font-weight: 600;
+            }
+            .btn-primary:hover {
+                background: var(--ac-h);
+                border-color: var(--ac-h);
+                color: var(--bg);
+            }
+            @media (max-width: 760px) {
+                .nav-links {
+                    display: none;
+                }
+            }
+
+            /* ─────────── Hero ─────────── */
+            .hero {
+                padding: 88px 0 56px;
+                text-align: center;
+                position: relative;
+            }
+            .hero::before {
+                /* very subtle grid backdrop, evokes the tile floor */
+                content: "";
+                position: absolute;
+                inset: 0;
+                pointer-events: none;
+                background-image:
+                    linear-gradient(var(--ac-d) 1px, transparent 1px),
+                    linear-gradient(90deg, var(--ac-d) 1px, transparent 1px);
+                background-size: 80px 80px;
+                mask-image: radial-gradient(
+                    ellipse at top,
+                    black 30%,
+                    transparent 75%
+                );
+                -webkit-mask-image: radial-gradient(
+                    ellipse at top,
+                    black 30%,
+                    transparent 75%
+                );
+                opacity: 0.6;
+            }
+            .hero-inner {
+                position: relative;
+                z-index: 1;
+            }
+            .hero-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 12px;
+                border: 1px solid var(--br);
+                background: var(--s1);
+                color: var(--tm);
+                font-size: 11px;
+                letter-spacing: 0.05em;
+                margin-bottom: 28px;
+            }
+            .hero-badge .dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--ac);
+                box-shadow: 0 0 10px var(--ac);
+            }
+            .hero h1 {
+                font-size: clamp(2rem, 5.5vw, 3.6rem);
+                font-weight: 500;
+                letter-spacing: -0.02em;
+                line-height: 1.08;
+                margin: 0 auto 22px;
+                max-width: 880px;
+                color: var(--tx);
+            }
+            .hero h1 .accent {
+                color: var(--ac);
+            }
+            .hero-sub {
+                max-width: 660px;
+                margin: 0 auto 36px;
+                color: var(--tm);
+                font-size: 1rem;
+                line-height: 1.7;
+            }
+            .hero-cta {
+                display: inline-flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                justify-content: center;
+            }
+
+            /* ─────────── Install snippet under hero ─────────── */
+            .install-snippet {
+                max-width: 760px;
+                margin: 28px auto 0;
+                text-align: left;
+                border: 1px solid var(--br);
+                background: var(--s1);
+            }
+            .install-snippet .snip-head {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 14px;
+                border-bottom: 1px solid var(--br);
+                background: var(--s2);
+                font-size: 11px;
+                letter-spacing: 0.05em;
+                color: var(--tm);
+            }
+            .install-snippet .snip-head code {
+                color: var(--ac);
+            }
+            .install-snippet .copy-btn {
+                margin-left: auto;
+                font: inherit;
+                font-size: 10px;
+                letter-spacing: 0.06em;
+                color: var(--tm);
+                background: transparent;
+                border: 1px solid var(--br);
+                padding: 3px 9px;
+                cursor: pointer;
+                transition:
+                    border-color 0.15s,
+                    color 0.15s;
+            }
+            .install-snippet .copy-btn:hover {
+                border-color: var(--ac);
+                color: var(--ac);
+            }
+            .install-snippet pre {
+                margin: 0;
+                padding: 14px 16px;
+                font-size: 12px;
+                line-height: 1.65;
+                color: var(--tx);
+                overflow-x: auto;
+                background: var(--bg);
+            }
+            .install-snippet pre .k {
+                color: var(--ac);
+            }
+            .install-snippet pre .s {
+                color: #d9c879;
+            }
+            .install-snippet pre .c {
+                color: var(--td);
+            }
+
+            /* ─────────── "Where Runefort fits" positioning row ─────────── */
+            .fits-row {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 1px;
+                background: var(--br);
+                border: 1px solid var(--br);
+            }
+            .fits-cell {
+                background: var(--bg);
+                padding: 22px 20px;
+            }
+            .fits-cell .fits-tag {
+                display: inline-block;
+                font-size: 10px;
+                letter-spacing: 0.08em;
+                color: var(--tm);
+                margin-bottom: 10px;
+                text-transform: uppercase;
+            }
+            .fits-cell h4 {
+                font-size: 0.92rem;
+                font-weight: 600;
+                margin: 0 0 8px;
+                color: var(--tx);
+            }
+            .fits-cell h4 .accent {
+                color: var(--ac);
+            }
+            .fits-cell p {
+                font-size: 0.82rem;
+                line-height: 1.6;
+                color: var(--tm);
+                margin: 0;
+            }
+            @media (max-width: 900px) {
+                .fits-row {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+            @media (max-width: 600px) {
+                .fits-row {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            /* ─────────── Editor showcase ─────────── */
+            .editor-section {
+                padding: 8px 0 56px;
+            }
+            .editor-frame {
+                max-width: 1420px;
+                margin: 0 auto;
+                padding: 0 24px;
+            }
+            .editor-card {
+                border: 1px solid var(--br);
+                background: var(--s1);
+                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+            }
+            .editor-titlebar {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 10px 16px;
+                border-bottom: 1px solid var(--br);
+                background: var(--s2);
+                font-size: 11px;
+                letter-spacing: 0.04em;
+            }
+            .editor-titlebar .dots {
+                display: inline-flex;
+                gap: 6px;
+            }
+            .editor-titlebar .dots i {
+                display: inline-block;
+                width: 9px;
+                height: 9px;
+                border-radius: 50%;
+                background: var(--br);
+            }
+            .editor-titlebar .dots i:nth-child(1) {
+                background: #ff5f57;
+            }
+            .editor-titlebar .dots i:nth-child(2) {
+                background: #febc2e;
+            }
+            .editor-titlebar .dots i:nth-child(3) {
+                background: var(--ac);
+            }
+            .editor-titlebar .label {
+                color: var(--tm);
+            }
+            .editor-titlebar .label code {
+                color: var(--ac);
+                background: transparent;
+            }
+            .editor-titlebar .open-new {
+                margin-left: auto;
+                color: var(--tm);
+                text-decoration: none;
+                font-size: 11px;
+                letter-spacing: 0.06em;
+                padding: 4px 10px;
+                border: 1px solid var(--br);
+                transition:
+                    border-color 0.15s,
+                    color 0.15s;
+            }
+            .editor-titlebar .open-new:hover {
+                border-color: var(--ac);
+                color: var(--ac);
+            }
+            .editor-iframe {
+                width: 100%;
+                height: min(820px, 75vh);
+                min-height: 520px;
+                border: 0;
+                display: block;
+                background: var(--bg);
+            }
+            .editor-caption {
+                margin: 18px auto 0;
+                max-width: 720px;
+                padding: 0 24px;
+                text-align: center;
+                color: var(--td);
+                font-size: 11px;
+                letter-spacing: 0.04em;
+            }
+
+            /* ─────────── Card grids ─────────── */
+            .grid {
+                display: grid;
+                gap: 1px;
+                background: var(--br);
+                border: 1px solid var(--br);
+            }
+            .grid-2 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .grid-3 {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .grid-4 {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            .card {
+                background: var(--bg);
+                padding: 28px 26px;
+                transition: background 0.15s;
+            }
+            .card:hover {
+                background: var(--s1);
+            }
+            .card h3 {
+                font-size: 1rem;
+                font-weight: 600;
+                margin: 0 0 6px;
+                color: var(--tx);
+            }
+            .card .kind {
+                display: inline-block;
+                font-size: 11px;
+                letter-spacing: 0.02em;
+                color: var(--ac);
+                margin-bottom: 10px;
+            }
+            .card .kind::before {
+                content: "› ";
+                color: var(--td);
+            }
+            .card p {
+                font-size: 0.85rem;
+                line-height: 1.65;
+                color: var(--tm);
+                margin: 0 0 14px;
+            }
+            .card pre {
+                background: var(--s2);
+                border-left: 2px solid var(--ac);
+                color: var(--tx);
+                font-size: 11px;
+                padding: 10px 12px;
+                margin: 0;
+                overflow-x: auto;
+                line-height: 1.55;
+            }
+            .card pre .k {
+                color: var(--ac);
+            }
+            .card pre .s {
+                color: #d9c879;
+            }
+            .card pre .n {
+                color: #c08bff;
+            }
+
+            /* ─────────── Three surfaces (code triptych) ─────────── */
+            .surfaces {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1px;
+                background: var(--br);
+                border: 1px solid var(--br);
+            }
+            .surface {
+                background: var(--bg);
+                display: flex;
+                flex-direction: column;
+            }
+            .surface-head {
+                padding: 14px 16px;
+                border-bottom: 1px solid var(--br);
+                background: var(--s1);
+                font-size: 11px;
+                letter-spacing: 0.06em;
+            }
+            .surface-head .name {
+                color: var(--ac);
+                font-weight: 600;
+            }
+            .surface-head .desc {
+                color: var(--td);
+                display: block;
+                margin-top: 4px;
+                letter-spacing: 0.02em;
+            }
+            .surface pre {
+                padding: 18px;
+                margin: 0;
+                font-size: 11px;
+                line-height: 1.65;
+                color: var(--tx);
+                flex: 1;
+                overflow-x: auto;
+                background: var(--bg);
+            }
+
+            /* ─────────── VS / positioning ─────────── */
+            .vs-card h3 {
+                color: var(--tx);
+            }
+            .vs-card .them {
+                color: var(--warn);
+                font-size: 0.85rem;
+                line-height: 1.55;
+                margin: 0 0 8px;
+            }
+            .vs-card .us {
+                color: var(--ac);
+                font-size: 0.85rem;
+                line-height: 1.55;
+                margin: 0;
+                font-weight: 500;
+            }
+
+            /* ─────────── Vocabulary cards ─────────── */
+            .vocab-card .vocab-id {
+                display: inline-block;
+                font-size: 10px;
+                letter-spacing: 0.06em;
+                color: var(--bg);
+                background: var(--ac);
+                padding: 2px 8px;
+                margin-bottom: 12px;
+                font-weight: 600;
+            }
+            .vocab-card .vocab-id.unbuilt {
+                color: var(--tm);
+                background: transparent;
+                border: 1px solid var(--br);
+            }
+
+            /* ─────────── Feature row (framework) ─────────── */
+            .feat-row {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 1px;
+                background: var(--br);
+                border: 1px solid var(--br);
+            }
+            .feat {
+                background: var(--bg);
+                padding: 24px;
+            }
+            .feat .num {
+                font-size: 11px;
+                color: var(--ac);
+                letter-spacing: 0.12em;
+                margin-bottom: 12px;
+                display: block;
+            }
+            .feat h4 {
+                font-size: 0.92rem;
+                font-weight: 600;
+                margin: 0 0 6px;
+                color: var(--tx);
+            }
+            .feat p {
+                font-size: 0.8rem;
+                line-height: 1.6;
+                color: var(--tm);
+                margin: 0;
+            }
+
+            /* ─────────── Ecosystem ─────────── */
+            .eco {
+                padding: 30px;
+                border: 1px solid var(--br);
+                background: var(--s1);
+            }
+            .eco p {
+                color: var(--tm);
+                line-height: 1.7;
+                margin: 0 0 18px;
+                font-size: 0.92rem;
+                max-width: 720px;
+            }
+            .eco-links {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+            .eco-link {
+                padding: 6px 12px;
+                border: 1px solid var(--br);
+                color: var(--tm);
+                text-decoration: none;
+                font-size: 11px;
+                letter-spacing: 0.05em;
+                transition:
+                    border-color 0.15s,
+                    color 0.15s;
+            }
+            .eco-link:hover {
+                border-color: var(--ac);
+                color: var(--ac);
+            }
+
+            /* ─────────── CTA ─────────── */
+            .final-cta {
+                text-align: center;
+                padding: 96px 24px 88px;
+                border-top: 1px solid var(--br);
+                background: var(--s1);
+            }
+            .final-cta h2 {
+                font-size: clamp(1.6rem, 4vw, 2.4rem);
+                font-weight: 500;
+                letter-spacing: -0.01em;
+                margin: 0 0 16px;
+            }
+            .final-cta h2 .accent {
+                color: var(--ac);
+            }
+            .final-cta p {
+                max-width: 560px;
+                margin: 0 auto 28px;
+                color: var(--tm);
+                line-height: 1.7;
+            }
+            .final-cta .actions {
+                display: inline-flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                justify-content: center;
+            }
+
+            /* ─────────── Footer ─────────── */
+            footer {
+                border-top: 1px solid var(--br);
+                padding: 24px;
+            }
+            .footer-inner {
+                max-width: 1100px;
+                margin: 0 auto;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 14px;
+                font-size: 11px;
+                color: var(--td);
+            }
+            .footer-inner a {
+                color: var(--ac);
+                text-decoration: none;
+                margin-right: 14px;
+            }
+            .footer-inner a:hover {
+                color: var(--ac-h);
+            }
+            .footer-right {
+                display: flex;
+                gap: 14px;
+                flex-wrap: wrap;
+            }
+            .footer-right a {
+                color: var(--td);
+            }
+            .footer-right a:hover {
+                color: var(--tx);
+            }
+
+            /* ─────────── Reveal-on-scroll ─────────── */
+            .rv {
+                opacity: 0;
+                transform: translateY(14px);
+                transition:
+                    opacity 0.55s ease,
+                    transform 0.55s ease;
+            }
+            .rv.v {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            /* ─────────── Responsive ─────────── */
+            @media (max-width: 900px) {
+                .grid-3,
+                .grid-4,
+                .feat-row {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                .surfaces {
+                    grid-template-columns: 1fr;
+                }
+            }
+            @media (max-width: 600px) {
+                .grid-2,
+                .grid-3,
+                .grid-4,
+                .feat-row {
+                    grid-template-columns: 1fr;
+                }
+                .section {
+                    padding: 64px 0;
+                }
+                .hero {
+                    padding: 56px 0 40px;
+                }
+                .nav-cta-wrap .btn:not(.btn-primary) {
+                    display: none;
+                }
+            }
+        </style>
+
+        <script type="module" src="/amp-nav.js"></script>
+    </head>
+    <body>
+        <!-- ── Cross-portfolio nav ── -->
+        <amp-nav property="runefort"></amp-nav>
+
+        <!-- ── Site nav ── -->
+        <nav class="site-nav">
+            <div class="site-nav-inner">
+                <a href="#" class="brand"
+                    ><span class="rune">ᚲ</span>RUNEFORT</a
+                >
+                <div class="nav-links">
+                    <a href="#editor">try it live</a>
+                    <a href="#fits">where it fits</a>
+                    <a href="#tenants">built for</a>
+                    <a href="#primitives">primitives</a>
+                    <a href="#engineers">for engineers</a>
+                    <a href="#scales">lore</a>
+                </div>
+                <div class="nav-cta-wrap">
+                    <a
+                        href="https://github.com/c-u-l8er/runefort.com"
+                        class="btn"
+                        >github &uarr;</a
+                    >
+                    <a href="/app/" class="btn btn-primary"
+                        >walk a fort &rarr;</a
+                    >
+                </div>
+            </div>
+        </nav>
+
+        <!-- ── Hero ── -->
+        <header class="hero">
+            <div class="hero-inner wrap">
+                <div class="hero-badge">
+                    <span class="dot"></span> open protocol &middot; ~5KB
+                    &middot; runs in any HTML page &middot; BYOK LLM
+                </div>
+                <h1>
+                    an open protocol for
+                    <span class="accent">AI-authored tile layouts</span> that
+                    live in your repo.
+                </h1>
+                <p class="hero-sub">
+                    Describe a tile. Get a working one in your browser. Tiles
+                    are file-backed, runtime-state-bindable, and saved as
+                    diffable JSON &mdash; not SVG, not a hosted product, not
+                    locked to any framework.
+                </p>
+                <div class="hero-cta">
+                    <a
+                        href="#editor"
+                        class="btn btn-primary"
+                        style="padding: 10px 18px; font-size: 12px"
+                        >try it live &darr;</a
+                    >
+                    <a
+                        href="/docs/spec/runefort.protocol.md"
+                        class="btn"
+                        style="padding: 10px 18px; font-size: 12px"
+                        >read the spec</a
+                    >
+                </div>
+
+                <!-- Drop-in install snippet — the engineer-scanner asset. -->
+                <div class="install-snippet" aria-label="Install snippet">
+                    <div class="snip-head">
+                        <code>install</code>
+                        <span>&mdash; one script tag, no build step</span>
+                        <button
+                            type="button"
+                            class="copy-btn"
+                            id="copy-install"
+                        >
+                            copy
+                        </button>
+                    </div>
+                    <pre
+                        id="install-pre"
+                    ><span class="c">&lt;!-- 1. load the framework + theme --&gt;</span>
+<span class="k">&lt;script</span> type=<span class="s">"module"</span> src=<span class="s">"https://unpkg.com/@runefort/core"</span><span class="k">&gt;&lt;/script&gt;</span>
+<span class="k">&lt;link</span> rel=<span class="s">"stylesheet"</span> href=<span class="s">"https://unpkg.com/@runefort/core/theme.css"</span><span class="k">&gt;</span>
+
+<span class="c">&lt;!-- 2. declare a floor of rooms --&gt;</span>
+<span class="k">&lt;rune-floor</span> columns=<span class="s">"6"</span> rows=<span class="s">"2"</span><span class="k">&gt;</span>
+  <span class="k">&lt;rune-room</span> id=<span class="s">"memory"</span> position=<span class="s">"0,0"</span> size=<span class="s">"3,2"</span> anchor=<span class="s">"lib/memory.ex:24"</span><span class="k">&gt;&lt;/rune-room&gt;</span>
+  <span class="k">&lt;rune-room</span> id=<span class="s">"deploy"</span> position=<span class="s">"3,0"</span> size=<span class="s">"3,2"</span> anchor=<span class="s">"lib/deploy.ex"</span><span class="k">&gt;&lt;/rune-room&gt;</span>
+<span class="k">&lt;/rune-floor&gt;</span></pre>
+                </div>
+            </div>
+        </header>
+
+        <!-- ── Live editor showcase ── -->
+        <section id="editor" class="editor-section">
+            <div class="editor-frame">
+                <div class="editor-card">
+                    <div class="editor-titlebar">
+                        <span class="dots"><i></i><i></i><i></i></span>
+                        <span class="label"
+                            >&darr; a live fort &mdash; one campus, one floor,
+                            every rune clickable</span
+                        >
+                        <a
+                            href="/app/"
+                            target="_blank"
+                            rel="noopener"
+                            class="open-new"
+                            >open in new tab &uarr;</a
+                        >
+                    </div>
+                    <iframe
+                        class="editor-iframe"
+                        src="/app/"
+                        title="Runefort editor"
+                        loading="lazy"
+                        allow="clipboard-read; clipboard-write"
+                    ></iframe>
+                </div>
+                <p class="editor-caption">
+                    this is the substrate &mdash; not a screenshot. click any
+                    tile to open it. refine a rune with an llm. fork the demo
+                    fort and start placing your own. local by default; sign in
+                    to sync.
+                </p>
+            </div>
+        </section>
+
+        <!-- ── Where Runefort fits (positioning row) ── -->
+        <section id="fits" class="section rv">
+            <div class="wrap">
+                <p class="section-label">where it fits</p>
+                <h2 class="section-title">
+                    a layout protocol, not a hosted product.
+                </h2>
+                <p class="section-sub">
+                    Most tools in this neighborhood are either AI app builders
+                    or hosted dashboards. Runefort is the small open piece that
+                    fits beside them &mdash; the layout language they all
+                    benefit from.
+                </p>
+                <div class="fits-row">
+                    <div class="fits-cell">
+                        <span class="fits-tag">vs v0 / Bolt / Lovable</span>
+                        <h4>
+                            they generate <span class="accent">apps</span>; we
+                            generate <span class="accent">layouts</span> you
+                            embed in any app.
+                        </h4>
+                        <p>
+                            AI UI builders ship full React projects. Runefort
+                            ships ~5KB of Web Components plus a portable JSON
+                            spec for the grid itself. Drop the result inside
+                            whatever those tools (or you) already built.
+                        </p>
+                    </div>
+                    <div class="fits-cell">
+                        <span class="fits-tag"
+                            >vs GridStack / Muuri / Lumino</span
+                        >
+                        <h4>
+                            widget grids, plus
+                            <span class="accent">file anchors</span>, state
+                            classes, and a vocabulary model.
+                        </h4>
+                        <p>
+                            Tile-grid libraries handle drag and resize. Runefort
+                            adds rooms that own files, runtime signals that
+                            color tiles, and a typed extension surface so apps
+                            add features without forking the protocol.
+                        </p>
+                    </div>
+                    <div class="fits-cell">
+                        <span class="fits-tag"
+                            >vs Grafana / Retool / ToolJet</span
+                        >
+                        <h4>
+                            no vendor, no per-seat, no
+                            <span class="accent">data layer</span> opinion.
+                        </h4>
+                        <p>
+                            Hosted dashboard and internal-tools platforms own
+                            your data and your auth. Runefort owns nothing
+                            &mdash; it's a 5KB protocol you ship inside whatever
+                            stack you already have. BYO transport, BYO auth, BYO
+                            LLM key.
+                        </p>
+                    </div>
+                    <div class="fits-cell">
+                        <span class="fits-tag"
+                            >vs tldraw / Heptabase / Canvas</span
+                        >
+                        <h4>
+                            infinite canvases think;
+                            <span class="accent">grids ship</span>.
+                        </h4>
+                        <p>
+                            Spatial workspaces are for personal cognition.
+                            Runefort is grid-only, deterministic, and diffable
+                            in version control &mdash; built so a system's place
+                            looks the same on every machine and every commit.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Vocabularies / first tenants ── -->
+        <section id="tenants" class="section rv">
+            <div class="wrap">
+                <p class="section-label">built for</p>
+                <h2 class="section-title">
+                    vocabularies on the floor.
+                    <span class="accent">dark factory was first.</span>
+                </h2>
+                <p class="section-sub">
+                    The substrate is empty until something moves in.
+                    Vocabularies declare what a tile <em>means</em> in a given
+                    domain &mdash; the dark factory was the original tenant;
+                    supervisor floors, atlases, and dashboards were always
+                    coming. Yours can move in next; vocabulary unknown means
+                    degrade, not fail.
+                </p>
+                <div class="grid grid-2">
+                    <div class="card vocab-card">
+                        <span class="vocab-id">dark-factory.v1</span>
+                        <h3>agents that deploy agents</h3>
+                        <p>
+                            the v2 vision, lifted into the new protocol. tiles
+                            are workers. buildings are services in the pipeline
+                            &mdash; specprompt, agentelic, fleetprompt,
+                            runefort. campuses are deployments. corridors carry
+                            build status. backwards compatible with anything
+                            written against v2.
+                        </p>
+                    </div>
+                    <div class="card vocab-card">
+                        <span class="vocab-id">supervisor-floor.v1</span>
+                        <h3>autonomous capabilities</h3>
+                        <p>
+                            for [&amp;] supervisors. tiles carry autonomy level,
+                            uptime, last action. state class follows the
+                            supervisor's health. the room <em>is</em> the
+                            supervisor as far as the floor is concerned.
+                        </p>
+                    </div>
+                    <div class="card vocab-card">
+                        <span class="vocab-id">codebase-atlas.v1</span>
+                        <h3>a repository as a place</h3>
+                        <p>
+                            tiles are modules; claims are file globs; signals
+                            are coverage, churn, hotness. cold tiles are stable.
+                            hot tiles are this week. new contributors stop
+                            asking "where do i look?" and start looking.
+                        </p>
+                    </div>
+                    <div class="card vocab-card">
+                        <span class="vocab-id">dashboard-grid.v1</span>
+                        <h3>observability tiles</h3>
+                        <p>
+                            tiles are widgets; signals push to state classes.
+                            cold/warm/hot/fault is enough vocabulary for most
+                            boards. when it isn't, you write your own.
+                        </p>
+                    </div>
+                </div>
+                <p class="section-sub" style="margin-top: 28px">
+                    Write your own vocabulary at any time &mdash; namespace it
+                    freely (<code>com.example.my-vocab.v1</code>), drop it in
+                    <code>meta</code>, ship. The protocol does not require
+                    registration.
+                </p>
+            </div>
+        </section>
+
+        <!-- ── Scales (brand layer — the foundry mythology) ── -->
+        <section id="scales" class="section rv">
+            <div class="wrap">
+                <p class="section-label">the scales</p>
+                <h2 class="section-title">
+                    four scales of a <span class="accent">place.</span>
+                </h2>
+                <p class="section-sub">
+                    a floor alone is a grid. real systems live at multiple zooms
+                    &mdash; one campus, many buildings, many floors per
+                    building, many tiles per floor. the substrate carries all
+                    four; you pick the one you need.
+                </p>
+                <div class="grid grid-4">
+                    <div class="card">
+                        <span class="kind">campus</span>
+                        <h3>the top</h3>
+                        <p>
+                            the outermost frame. one campus per fort. holds many
+                            buildings, the marquee, the elevator wells. zoom out
+                            here to see the whole world at once.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <span class="kind">building</span>
+                        <h3>a domain</h3>
+                        <p>
+                            a stack of floors. one building is one slice of the
+                            system &mdash; a service, a product, a team, a
+                            tenant. the elevator runs up and down; each floor is
+                            a different concern.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <span class="kind">floor</span>
+                        <h3>the grid</h3>
+                        <p>
+                            where work happens. a css grid of rooms. neighbors
+                            thread the rooms together; state binds them to live
+                            signals. this is the page you actually walk.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <span class="kind">room</span>
+                        <h3>the tile</h3>
+                        <p>
+                            the atom. one rune, one claim, one state class.
+                            click in and the room becomes the page &mdash; its
+                            content surfaced inline, not in another tab.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Names ── -->
+        <section id="names" class="section rv">
+            <div class="wrap">
+                <p class="section-label">names</p>
+                <h2 class="section-title">
+                    the fort holds. the rune <span class="accent">names.</span>
+                </h2>
+                <p class="section-sub">
+                    two words do most of the work in this protocol. one is the
+                    workspace. the other is the mark on every tile.
+                </p>
+                <div class="grid grid-2">
+                    <div class="card">
+                        <span class="kind">a fort</span>
+                        <h3>the workspace</h3>
+                        <p>
+                            your installation. one fort holds one campus. fork a
+                            fort to start your own. share a fort by url and
+                            anyone who clicks can fork it. sync forts across
+                            machines when signed in. forts can bridge to other
+                            forts &mdash; the substrate is multi-tenant from day
+                            one.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <span class="kind">a rune</span>
+                        <h3>the mark</h3>
+                        <p>
+                            the sigil on every tile. the name that appears in
+                            the marquee. the thing you click. the thing an llm
+                            refines when you say "rewrite this."
+                            <span style="color: var(--ac)">&#x16B2;</span> is
+                            itself a rune. every room has one. they are how the
+                            place stays legible at a glance.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Primitives shipped + horizon ── -->
+        <section id="primitives" class="section rv">
+            <div class="wrap">
+                <p class="section-label">primitives</p>
+                <h2 class="section-title">
+                    four shipped today.
+                    <span class="accent">six on the horizon.</span>
+                </h2>
+                <p class="section-sub">
+                    v0.1 ships the four primitives that describe a floor. v0.2
+                    grows the substrate to carry the rest of the [&amp;] stack
+                    &mdash; loops, capabilities, traces, and the cross-fort
+                    wiring that lets a system actually run.
+                </p>
+
+                <!-- Today -->
+                <h3
+                    style="
+                        font-size: 0.85rem;
+                        color: var(--tm);
+                        margin: 24px 0 12px;
+                        letter-spacing: 0.04em;
+                    "
+                >
+                    › shipped in v0.1
+                </h3>
+                <div class="grid grid-4">
+                    <div class="card">
+                        <span class="kind">room</span>
+                        <h3>the tile</h3>
+                        <p>position, size, label, body. the unit you place.</p>
+                    </div>
+                    <div class="card">
+                        <span class="kind">claim</span>
+                        <h3>what it owns</h3>
+                        <p>
+                            inline content or a file anchor. surfaced when you
+                            click in.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <span class="kind">neighbor</span>
+                        <h3>how it connects</h3>
+                        <p>
+                            arrow-key adjacency. structural edges between rooms.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <span class="kind">state</span>
+                        <h3>live status</h3>
+                        <p>
+                            cold, warm, hot, fault, idle &mdash; or any class
+                            your vocabulary defines.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Horizon -->
+                <h3
+                    style="
+                        font-size: 0.85rem;
+                        color: var(--tm);
+                        margin: 36px 0 12px;
+                        letter-spacing: 0.04em;
+                    "
+                >
+                    › v0.2 horizon &mdash; for the [&amp;] stack
+                </h3>
+                <div class="grid grid-3">
+                    <div class="card">
+                        <span class="kind" style="color: var(--warn)"
+                            >container</span
+                        >
+                        <h3>nesting in the spec</h3>
+                        <p>
+                            campus &rarr; building &rarr; floor &rarr; room,
+                            lifted from app convention into the protocol. a
+                            renderer can show any scale on its own and still be
+                            conformant.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <span class="kind" style="color: var(--warn)"
+                            >bridge</span
+                        >
+                        <h3>fort-to-fort wiring</h3>
+                        <p>
+                            a connection between two forts. b2b token flow.
+                            nested forts. how an [&amp;] system spans tenants
+                            without smearing them into one campus.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <span class="kind" style="color: var(--warn)"
+                            >capability</span
+                        >
+                        <h3>bind to <code>[&amp;]</code></h3>
+                        <p>
+                            tag a room with an [&amp;] capability descriptor.
+                            the room is the unit; the descriptor says what it
+                            can be composed with. the substrate gets composable.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <span class="kind" style="color: var(--warn)"
+                            >loop</span
+                        >
+                        <h3>bind to <code>pulse</code></h3>
+                        <p>
+                            bind a container to a pulse manifest. phases &mdash;
+                            retrieve, route, act, learn, consolidate &mdash; map
+                            to state classes. the floor breathes with the loop.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <span class="kind" style="color: var(--warn)"
+                            >goal</span
+                        >
+                        <h3>bind to <code>graphonomous</code></h3>
+                        <p>
+                            tie a tile to a graphonomous goal. coverage drives
+                            the state class. progress is visible spatially
+                            &mdash; not buried in a status page.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <span class="kind" style="color: var(--warn)"
+                            >trace</span
+                        >
+                        <h3>live activity</h3>
+                        <p>
+                            a stream of recent traces attached to a room. the
+                            room owns its history, not just its current frame.
+                            open it and read what just happened.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── For engineers (small) ── -->
+        <section id="engineers" class="section rv">
+            <div class="wrap">
+                <p class="section-label">for engineers</p>
+                <h2 class="section-title">an open protocol underneath.</h2>
+                <p class="section-sub">
+                    runefort is a small declarative protocol. the primitives
+                    compile to a css grid via the
+                    <code>@runefort/core</code> web components &mdash; ~5kb,
+                    zero build step, embeds inside react, vue, svelte, liveview,
+                    or plain html. three authoring surfaces:
+                    <code>runefort.json</code>,
+                    <code>&lt;rune-*&gt;</code> custom elements, or a
+                    curly-brace <code>.rune</code> dsl. independent of the rest
+                    of the [&amp;] stack &mdash; usable by them, never required.
+                </p>
+                <div class="eco">
+                    <div class="eco-links">
+                        <a
+                            href="/docs/spec/runefort.protocol.md"
+                            class="eco-link"
+                            >protocol spec &uarr;</a
+                        >
+                        <a href="/docs/spec/runefort.core.md" class="eco-link"
+                            >@runefort/core &uarr;</a
+                        >
+                        <a href="/docs/spec/runefort.dsl.md" class="eco-link"
+                            >.rune dsl &uarr;</a
+                        >
+                        <a
+                            href="https://github.com/c-u-l8er/runefort.com"
+                            class="eco-link"
+                            >github &uarr;</a
+                        >
+                        <a
+                            href="https://ampersandboxdesign.com"
+                            class="eco-link"
+                            >[&amp;] ecosystem &uarr;</a
+                        >
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Final CTA ── -->
+        <section class="final-cta rv">
+            <h2>open a <span class="accent">fort.</span></h2>
+            <p>
+                Fork the demo. Place a few rooms. Refine a rune. Give your
+                system a place &mdash; whether it's a dark factory, a codebase,
+                or something the substrate hasn't seen yet.
+            </p>
+            <div class="actions">
+                <a
+                    href="/app/"
+                    class="btn btn-primary"
+                    style="padding: 10px 20px; font-size: 12px"
+                    >walk a fort &rarr;</a
+                >
+                <a
+                    href="/docs/spec/runefort.protocol.md"
+                    class="btn"
+                    style="padding: 10px 20px; font-size: 12px"
+                    >read the spec</a
+                >
+                <a
+                    href="https://github.com/c-u-l8er/runefort.com"
+                    class="btn"
+                    style="padding: 10px 20px; font-size: 12px"
+                    >github &uarr;</a
+                >
+            </div>
+        </section>
+
+        <!-- ── Footer ── -->
+        <footer>
+            <div class="footer-inner">
+                <div>
+                    &copy; 2026 Runefort · Part of
+                    <a href="https://ampersandboxdesign.com"
+                        >[&amp;] Ampersand Box Design</a
+                    >
+                </div>
+                <div class="footer-right">
+                    <a href="/app/">walk a fort</a>
+                    <a href="#fits">where it fits</a>
+                    <a href="#tenants">built for</a>
+                    <a href="#primitives">primitives</a>
+                    <a href="#engineers">for engineers</a>
+                    <a href="/docs/spec/runefort.protocol.md">spec</a>
+                </div>
+            </div>
+        </footer>
+
+        <script>
+            // Reveal-on-scroll for .rv sections (mirrors agentromatic.com).
+            const obs = new IntersectionObserver(
+                (entries) => {
+                    for (const e of entries) {
+                        if (e.isIntersecting) {
+                            e.target.classList.add("v");
+                            obs.unobserve(e.target);
+                        }
+                    }
+                },
+                { threshold: 0.08, rootMargin: "0px 0px -40px 0px" },
+            );
+            document.querySelectorAll(".rv").forEach((el) => obs.observe(el));
+
+            // Smooth-scroll local anchors.
+            document.querySelectorAll('a[href^="#"]').forEach((a) => {
+                a.addEventListener("click", (e) => {
+                    const id = a.getAttribute("href");
+                    if (id.length < 2) return;
+                    const t = document.querySelector(id);
+                    if (!t) return;
+                    e.preventDefault();
+                    t.scrollIntoView({ behavior: "smooth", block: "start" });
+                });
+            });
+
+            // Forward legacy /?fort=<slug> deep links to /app/?fort=<slug> so old
+            // public-fort URLs keep working after the editor moved.
+            const params = new URLSearchParams(location.search);
+            if (params.has("fort")) {
+                location.replace("/app/?" + params.toString());
+            }
+
+            // Copy install snippet to clipboard.
+            const copyBtn = document.getElementById("copy-install");
+            const installPre = document.getElementById("install-pre");
+            if (copyBtn && installPre) {
+                copyBtn.addEventListener("click", async () => {
+                    const text = installPre.innerText;
+                    try {
+                        await navigator.clipboard.writeText(text);
+                        const orig = copyBtn.textContent;
+                        copyBtn.textContent = "copied ✓";
+                        setTimeout(() => (copyBtn.textContent = orig), 1600);
+                    } catch (e) {
+                        copyBtn.textContent = "select & copy";
+                    }
+                });
+            }
+        </script>
+    </body>
+</html>

@@ -11,7 +11,7 @@ Position: protocol-level. Independent of [&], PULSE, PRISM. May be used by them;
 
 ## 0. What this is, in one paragraph
 
-Runefort is a small declarative protocol for describing a **tiled, file-backed UI layout**. You declare *rooms* (tiles), *claims* (file-system regions each room owns), *neighbors* (adjacency for navigation), and *state bindings* (how live state colors a tile). A conformant renderer compiles the declaration to a CSS grid, wires up file-handoff to the user's editor, and overlays live state. The protocol is the contract between the declaration and the renderer. Nothing more.
+Runefort is a small declarative protocol for describing a **tiled, file-backed UI layout**. You declare *rooms* (tiles), *claims* (file-system regions each room owns), *neighbors* (adjacency for navigation), and *state bindings* (how live state colors a tile). A conformant renderer compiles the declaration to a CSS grid, surfaces each claim's content for inline viewing or editing, and overlays live state. The protocol is the contract between the declaration and the renderer. Nothing more.
 
 It is not a workforce platform. It is not a supervisor framework. It is not a graph visualization library. It is the **layout language** that those things can be built with.
 
@@ -44,7 +44,7 @@ A room is a tile in the grid. It has an id, a position, a size, and arbitrary me
 
 ### 2.2 Claim
 
-A claim is a file-system region a room "owns." A renderer uses claims to (a) list which files belong to a room, (b) generate file-handoff URLs (`vscode://`, `cursor://`, `zed://`), and (c) optionally render a read-only viewer.
+A claim is a file-system region a room "owns." A renderer uses claims to (a) list which files belong to a room and (b) surface those files inline — either as a viewer or an editor — when the user activates the room. Optional behaviors include generating external-editor handoff URLs (`vscode://`, `cursor://`, `zed://`) for users who prefer their own tools.
 
 ```json
 {
@@ -145,14 +145,14 @@ Both compile to the same JSON. Either is conformant. Neither is privileged.
 A conformant renderer MUST:
 
 1. **Layout.** Render rooms in a CSS grid (or visually equivalent) using each room's `position` and `size`. The grid MUST be deterministic — given the same JSON, the rendered DOM order MUST be stable.
-2. **Anchors.** Resolve each room's `anchor` to a `file://`-or-equivalent URL for editor handoff. Clicking a tile MUST navigate to the anchor.
+2. **Anchors.** Resolve each room's `anchor` to its content (the file or content region the room represents). Activating a tile MUST surface that content — by default, inline within the host page (viewer or editor). Renderers MAY additionally offer an external-editor handoff URL as a secondary action, but inline surfacing is the canonical behavior.
 3. **State classes.** Apply CSS classes from `state_bindings` to each room's root element. Class names MUST be predictable: `runefort-state-cold`, `runefort-state-hot`, etc.
 4. **Accessibility.** Each room MUST be focusable (keyboard) and have a stable accessible name (the room's `label` or `id`).
 5. **Neighbor navigation.** Arrow keys (or `h/j/k/l`) MUST move focus along `neighbor` edges. Renderers MAY also expose mouse navigation; keyboard support is required.
 
 A conformant renderer SHOULD:
 
-- Render a read-only file viewer for the focused room's `anchor`.
+- Provide an inline editor (not just a read-only viewer) for the focused room's `anchor` when the host environment supports text editing.
 - Highlight neighbor adjacencies on hover/focus.
 - Re-render on signal change without full reload.
 
@@ -161,6 +161,7 @@ A conformant renderer MAY:
 - Add domain-specific vocabularies (see §6).
 - Display additional metadata from `meta`.
 - Animate state class transitions.
+- Offer external-editor handoff URLs (`vscode://`, `cursor://`, `zed://`) as a secondary action for users who prefer their own tools. Renderers that run outside the browser (e.g. static-site generators, server-rendered HTML with no JS) MAY treat handoff as their primary surfacing strategy and still claim conformance.
 
 ## 6. Vocabularies (extension points)
 

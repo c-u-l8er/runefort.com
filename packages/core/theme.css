@@ -30,6 +30,14 @@
   background: var(--rune-bg);
   color: var(--rune-fg);
   font-family: system-ui, -apple-system, sans-serif;
+  /* Don't squish columns to nothing on narrow viewports. min-width: 0 lets
+     the floor stay within its parent grid cell; if its content (with the
+     minmax(140px, 1fr) tracks) exceeds the cell, overflow is visible and
+     bubbles up to the page-level horizontal scroll. We deliberately do NOT
+     set overflow-x:auto here because per the CSS spec, doing so would also
+     force overflow-y to compute as auto, producing a spurious vertical
+     scrollbar even when there's no vertical overflow. */
+  min-width: 0;
 }
 
 :where(rune-room) {
@@ -457,10 +465,14 @@
 }
 :where(rune-modal input[type="text"]),
 :where(rune-modal input[type="password"]),
+:where(rune-modal input[type="email"]),
 :where(rune-modal input[type="number"]),
 :where(rune-modal select),
 :where(rune-modal textarea) {
   width: 100%;
+  /* box-sizing: border-box so width:100% + padding + border doesn't exceed
+     the parent's width and produce a horizontal scrollbar inside the modal. */
+  box-sizing: border-box;
   background: var(--rune-bg);
   color: var(--rune-fg);
   border: 1px solid var(--rune-border);
@@ -607,6 +619,7 @@
 :where(rune-message) { display: none; }
 
 /* ─── Action ─── */
+rune-action[hidden] { display: none; }
 :where(rune-action) {
   display: inline-flex;
   align-items: center;

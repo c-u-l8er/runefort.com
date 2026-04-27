@@ -305,6 +305,10 @@ Constraints:
 - 2 to 3 buildings, 2 to 3 floors per building, 3 to 5 rooms per floor.
 - Campus id MUST NOT collide: ${existing || "(none)"}
 - ALL ids globally unique within the campus.
+- Within EACH building, floors get distinct data_level values "L1", "L2", "L3" in display order. Do NOT repeat "L1" across floors of the same building.
+- cell_height MUST be in the form "<n>px" (e.g. "140px"). Never use "auto" or empty.
+- gap MUST be in the form "<n>px" (e.g. "14px").
+- Room positions MUST NOT overlap. Pack rooms left-to-right, top-to-bottom.
 
 ${tpl?.promptSystem ? `Template: ${tpl.id}\n${tpl.promptSystem}` : ""}`,
     },
@@ -352,19 +356,109 @@ Current room: ${JSON.stringify(ctx.room)}`,
 export function extractJson(raw) {
   if (!raw || typeof raw !== "string") return null;
   let s = raw.trim();
-  // Strip markdown fences
+  // Strip markdown fences (opening fence — closing may not exist if truncated)
   s = s.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "");
   // Find first { or [
   const start = s.search(/[{[]/);
   if (start === -1) return null;
-  const end = Math.max(s.lastIndexOf("}"), s.lastIndexOf("]"));
-  if (end === -1) return null;
-  const slice = s.slice(start, end + 1);
-  try {
-    return JSON.parse(slice);
-  } catch (_) {
-    return null;
+
+  const fromStart = s.slice(start);
+  const lastBrace = Math.max(s.lastIndexOf("}"), s.lastIndexOf("]"));
+  if (lastBrace !== -1) {
+    const slice = s.slice(start, lastBrace + 1);
+    try { return JSON.parse(slice); } catch (_) { /* fall through to repair */ }
   }
+
+  // Repair attempt for truncated output (common when maxTokens is hit
+  // mid-response). Walks the string tracking open braces/brackets/quotes,
+  // then back-tracks to a "safe" boundary (after the last complete value)
+  // and appends the missing closers.
+  return repairAndParseTruncatedJson(fromStart);
+}
+
+/**
+ * Best-effort recovery from a JSON string that was truncated mid-output.
+ * Strategy: walk once to find the latest position where the parse stack
+ * was at a "clean" boundary (just after a complete value at depth ≥ 1),
+ * then close the remaining brackets in the right order.
+ *
+ * @param {string} s
+ * @returns {any | null}
+ */
+function repairAndParseTruncatedJson(s) {
+  /** @type {("}"|"]")[]} */
+  let stack = [];
+  let inString = false;
+  let esc = false;
+  // Track the last "safe" cut point — index AFTER the character at which
+  // the current scope just finished a complete value (string close, number
+  // end, true/false/null end, object/array close). At a safe cut, we can
+  // truncate the input here, drop any pending comma, and close outstanding
+  // brackets.
+  let safeEnd = -1;
+  /** @type {("}"|"]")[]} */
+  let safeStack = [];
+
+  const recordSafeAfterValue = (i, currentStack) => {
+    safeEnd = i + 1;
+    safeStack = currentStack.slice();
+  };
+
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inString) {
+      if (esc) { esc = false; continue; }
+      if (c === "\\") { esc = true; continue; }
+      if (c === '"') {
+        inString = false;
+        // A string close is a value-position only if the next non-whitespace
+        // char is a comma, `}`, or `]` (i.e. NOT a colon — that would mean
+        // the string was an object key). Peek ahead to disambiguate.
+        if (stack.length > 0) {
+          let j = i + 1;
+          while (j < s.length && /\s/.test(s[j])) j++;
+          const next = s[j];
+          if (next === "," || next === "}" || next === "]") {
+            recordSafeAfterValue(i, stack);
+          }
+        }
+      }
+      continue;
+    }
+    if (c === '"') { inString = true; continue; }
+    if (c === "{") { stack.push("}"); continue; }
+    if (c === "[") { stack.push("]"); continue; }
+    if (c === "}" || c === "]") {
+      stack.pop();
+      if (stack.length > 0) recordSafeAfterValue(i, stack);
+      else if (stack.length === 0) {
+        // Top-level close — try parsing what we have so far directly.
+        try { return JSON.parse(s.slice(0, i + 1)); } catch (_) { /* keep walking */ }
+      }
+      continue;
+    }
+    // Bare token (number / true / false / null) — only recognize when at
+    // a value position. Cheap heuristic: a digit, t, f, n following a
+    // colon-or-comma-or-array-open within the current scope.
+    if (/[\d\-tfn]/.test(c) && stack.length > 0) {
+      // Skip ahead past the bare value.
+      const m = s.slice(i).match(/^(?:-?\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?|true|false|null)/);
+      if (m) {
+        i += m[0].length - 1;
+        recordSafeAfterValue(i, stack);
+        continue;
+      }
+    }
+  }
+
+  if (safeEnd === -1) return null;
+
+  // Build a candidate by truncating at safeEnd, stripping any dangling
+  // comma, and appending closers from the safeStack in reverse order.
+  let candidate = s.slice(0, safeEnd);
+  candidate = candidate.replace(/,\s*$/, "");  // strip pending comma
+  for (let i = safeStack.length - 1; i >= 0; i--) candidate += safeStack[i];
+  try { return JSON.parse(candidate); } catch (_) { return null; }
 }
 
 /**
@@ -505,9 +599,14 @@ export async function generateFloorFor(building, userPrompt, opts = {}) {
     label: f.getAttribute("label") || f.id,
   }));
   const messages = promptAddFloor({ existingFloors, userPrompt, template: opts.template });
-  const result = await chat({ messages });
+  // 2500 covers floors with 6-12 rooms; default of 1500 truncated dense floors.
+  const result = await chat({ messages, maxTokens: 2500 });
   let json = extractJson(result.content);
-  if (!json || !json.id) throw new Error(`LLM did not return valid floor JSON. Raw: ${result.content.slice(0, 200)}`);
+  if (!json || !json.id) {
+    const looksTruncated = result.content.length > 1200 && !/[}\]]\s*$/.test(result.content);
+    const hint = looksTruncated ? "\n\n(Response appears truncated — try a smaller scope.)" : "";
+    throw new Error(`LLM did not return valid floor JSON. Raw: ${result.content.slice(0, 200)}…${hint}`);
+  }
   if (!Array.isArray(json.rooms)) throw new Error(`Floor missing "rooms" array. Raw: ${result.content.slice(0, 200)}`);
 
   // Post-process: prefer caller-supplied postProcess (avoids stale-module-
@@ -541,9 +640,14 @@ export async function generateBuildingFor(campus, userPrompt, opts = {}) {
     label: b.getAttribute("label") || b.id,
   }));
   const messages = promptAddBuilding({ existingBuildings, userPrompt, template: opts.template });
-  const result = await chat({ messages });
+  // Buildings = floors × rooms. 5000 tokens is comfortable for 3-5 floors.
+  const result = await chat({ messages, maxTokens: 5000 });
   const json = extractJson(result.content);
-  if (!json || !json.id) throw new Error(`LLM did not return valid building JSON. Raw: ${result.content.slice(0, 200)}`);
+  if (!json || !json.id) {
+    const looksTruncated = result.content.length > 1500 && !/[}\]]\s*$/.test(result.content);
+    const hint = looksTruncated ? "\n\n(Response appears truncated — try a smaller scope.)" : "";
+    throw new Error(`LLM did not return valid building JSON. Raw: ${result.content.slice(0, 200)}…${hint}`);
+  }
   if (!Array.isArray(json.floors)) throw new Error(`Building missing "floors" array. Raw: ${result.content.slice(0, 200)}`);
   const buildingEl = buildingFromJson(json);
   campus.appendChild(buildingEl);
@@ -569,9 +673,19 @@ export async function generateCampusFor(host, userPrompt, opts = {}) {
     label: c.getAttribute("label") || c.id,
   }));
   const messages = promptAddCampus({ existingCampuses, userPrompt, template: opts.template });
-  const result = await chat({ messages, maxTokens: 3000 }); // larger response — multi-building
+  // Campuses are large (multiple buildings × multiple floors × multiple
+  // rooms). 8000 tokens covers all reasonable cases without truncating mid-JSON.
+  const result = await chat({ messages, maxTokens: 16000 });
   const json = extractJson(result.content);
-  if (!json || !json.id) throw new Error(`LLM did not return valid campus JSON. Raw: ${result.content.slice(0, 200)}`);
+  if (!json || !json.id) {
+    const looksTruncated = result.content.length > 2000 && !/[}\]]\s*$/.test(result.content);
+    const hint = looksTruncated
+      ? "\n\n(Response appears truncated — try a smaller scope, or set a model with higher max_output_tokens.)"
+      : "";
+    throw new Error(
+      `LLM did not return valid campus JSON. Raw: ${result.content.slice(0, 200)}…${hint}`
+    );
+  }
   if (!Array.isArray(json.buildings)) throw new Error(`Campus missing "buildings" array. Raw: ${result.content.slice(0, 200)}`);
   const campusEl = campusFromJson(json);
   host.appendChild(campusEl);
@@ -742,8 +856,16 @@ export function floorFromJson(json) {
   if (json.data_level) el.setAttribute("data-level", json.data_level);
   const columns = parseInt(json.columns, 10) || 6;
   el.setAttribute("columns", String(columns));
-  if (json.cell_height) el.setAttribute("cell-height", json.cell_height);
-  if (json.gap) el.setAttribute("gap", json.gap);
+  // Apply sensible defaults so LLM-generated floors that omit cell_height /
+  // gap render with the same breathing room as hand-authored ones (matches
+  // forts/welcome.json conventions). The default rune-floor gap of 8px is
+  // too tight for tiles with multi-line body content. Reject non-pixel
+  // values (e.g. "auto", empty string) — those make grid-auto-rows
+  // content-sized which causes inconsistent row heights and apparent
+  // vertical room overlap.
+  const validPx = /^\d+(\.\d+)?(px|rem|em)$/i;
+  el.setAttribute("cell-height", validPx.test(json.cell_height || "") ? json.cell_height : "140px");
+  el.setAttribute("gap", validPx.test(json.gap || "") ? json.gap : "14px");
   el.dataset.runefortGenerated = "true";
 
   /** @type {{ position: [number, number], size: [number, number] }[]} */
@@ -786,8 +908,17 @@ export function buildingFromJson(json) {
   const elevator = document.createElement("rune-elevator");
   el.appendChild(elevator);
 
-  // Floors
-  for (const f of json.floors || []) {
+  // Floors. Auto-assign data_level by index when the LLM omitted it or gave
+  // duplicates (a common failure mode — every floor ends up labelled "L1"
+  // in the elevator). The user-visible level always reflects the sequence
+  // within this building.
+  const floorJsonList = json.floors || [];
+  const seenLevels = new Set();
+  for (let i = 0; i < floorJsonList.length; i++) {
+    const f = { ...floorJsonList[i] };
+    const desired = `L${i + 1}`;
+    if (!f.data_level || seenLevels.has(f.data_level)) f.data_level = desired;
+    seenLevels.add(f.data_level);
     const floorEl = floorFromJson(f);
     el.appendChild(floorEl);
   }
@@ -823,25 +954,178 @@ export function campusFromJson(json) {
  * @property {string} [id]
  */
 
-const THREAD_KEY = "runefort.threads";
-const ENTITY_KEY = "runefort.entities";
+// ─── Multi-fort persistence ─────────────────────────────────────────────
+//
+// localStorage layout:
+//   runefort.fortRegistry        JSON map { id → { title, vocabulary, createdAt, updatedAt, cloudId? } }
+//   runefort.activeFortId        string — currently-edited fort id
+//   runefort.fort.{id}.entities  per-fort entity snapshots (was runefort.entities)
+//   runefort.fort.{id}.threads   per-fort refinement threads (was runefort.threads)
+//
+// Legacy keys (pre-multi-fort) are imported on first load and then deleted.
+
+const FORT_KEYS = {
+  registry: "runefort.fortRegistry",
+  active:   "runefort.activeFortId",
+  /** @param {string} fortId */
+  entities: (fortId) => `runefort.fort.${fortId}.entities`,
+  /** @param {string} fortId */
+  threads:  (fortId) => `runefort.fort.${fortId}.threads`,
+};
+
+const LEGACY_ENTITY_KEY = "runefort.entities";
+const LEGACY_THREAD_KEY = "runefort.threads";
+
+/**
+ * @typedef {Object} FortMeta
+ * @property {string} id
+ * @property {string} title
+ * @property {string} vocabulary
+ * @property {number} createdAt
+ * @property {number} updatedAt
+ * @property {string} [cloudId]   server-side rune.forts.id once synced
+ * @property {number} [cloudVersion] last-synced rune.forts.version
+ */
+
+/**
+ * Fort registry — tracks which forts exist locally, which is active, and
+ * handles legacy data migration.
+ */
+export const fortStore = {
+  /** @returns {Record<string, FortMeta>} */
+  _readRegistry() {
+    try {
+      return JSON.parse(localStorage.getItem(FORT_KEYS.registry) || "{}");
+    } catch (_) { return {}; }
+  },
+  /** @param {Record<string, FortMeta>} reg */
+  _writeRegistry(reg) {
+    localStorage.setItem(FORT_KEYS.registry, JSON.stringify(reg));
+  },
+
+  /** @returns {FortMeta[]} sorted most-recently-updated first */
+  list() {
+    const reg = this._readRegistry();
+    return Object.values(reg).sort((a, b) => b.updatedAt - a.updatedAt);
+  },
+
+  /** @param {string} id @returns {FortMeta|null} */
+  get(id) {
+    return this._readRegistry()[id] || null;
+  },
+
+  /**
+   * @param {{ title?: string, vocabulary?: string, id?: string }} [opts]
+   * @returns {FortMeta}
+   */
+  create(opts = {}) {
+    const id = opts.id || `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const now = Date.now();
+    const meta = {
+      id,
+      title: opts.title || "Untitled fort",
+      vocabulary: opts.vocabulary || "core",
+      createdAt: now,
+      updatedAt: now,
+    };
+    const reg = this._readRegistry();
+    reg[id] = meta;
+    this._writeRegistry(reg);
+    return meta;
+  },
+
+  /** @param {string} id @param {Partial<FortMeta>} patch */
+  update(id, patch) {
+    const reg = this._readRegistry();
+    if (!reg[id]) return null;
+    reg[id] = { ...reg[id], ...patch, updatedAt: Date.now() };
+    this._writeRegistry(reg);
+    return reg[id];
+  },
+
+  /** @param {string} id */
+  delete(id) {
+    const reg = this._readRegistry();
+    delete reg[id];
+    this._writeRegistry(reg);
+    localStorage.removeItem(FORT_KEYS.entities(id));
+    localStorage.removeItem(FORT_KEYS.threads(id));
+    if (this.getActiveId() === id) {
+      // Pick another fort if available, otherwise clear active.
+      const next = this.list()[0];
+      if (next) this.setActiveId(next.id);
+      else localStorage.removeItem(FORT_KEYS.active);
+    }
+  },
+
+  /** @returns {string|null} */
+  getActiveId() {
+    return localStorage.getItem(FORT_KEYS.active);
+  },
+
+  /** @param {string} id */
+  setActiveId(id) {
+    if (!this._readRegistry()[id]) {
+      throw new Error(`fortStore.setActiveId: unknown fort ${id}`);
+    }
+    localStorage.setItem(FORT_KEYS.active, id);
+  },
+
+  /**
+   * Idempotent: returns the active fort id, creating one (or migrating legacy
+   * data) if none exists. Safe to call from any read/write path.
+   * @returns {string}
+   */
+  ensureActive() {
+    let id = this.getActiveId();
+    if (id && this._readRegistry()[id]) return id;
+
+    // Migrate legacy single-fort data, if present.
+    const legacyEntities = localStorage.getItem(LEGACY_ENTITY_KEY);
+    const legacyThreads  = localStorage.getItem(LEGACY_THREAD_KEY);
+    const hasLegacyData =
+      (legacyEntities && legacyEntities !== "{}") ||
+      (legacyThreads  && legacyThreads  !== "{}");
+
+    const meta = this.create({
+      title: hasLegacyData ? "Imported fort" : "Untitled fort",
+    });
+    id = meta.id;
+
+    if (legacyEntities) {
+      localStorage.setItem(FORT_KEYS.entities(id), legacyEntities);
+      localStorage.removeItem(LEGACY_ENTITY_KEY);
+    }
+    if (legacyThreads) {
+      localStorage.setItem(FORT_KEYS.threads(id), legacyThreads);
+      localStorage.removeItem(LEGACY_THREAD_KEY);
+    }
+
+    this.setActiveId(id);
+    return id;
+  },
+};
 
 /**
  * Entity store — persists LLM-generated rooms/floors/buildings/campuses to
  * localStorage so they survive reload. Each entry tracks the entity's type,
  * parent id, and the full JSON snapshot used to reconstruct the element.
  *
- * Schema: { [id]: { type, parent_id, json, ts } }
+ * Always operates on the active fort (see fortStore). Schema unchanged:
+ *   { [id]: { type, parent_id, json, ts } }
  */
 export const entityStore = {
   /** @returns {Record<string, any>} */
   _all() {
     try {
-      return JSON.parse(localStorage.getItem(ENTITY_KEY) || "{}");
+      const fortId = fortStore.ensureActive();
+      return JSON.parse(localStorage.getItem(FORT_KEYS.entities(fortId)) || "{}");
     } catch (_) { return {}; }
   },
   _save(data) {
-    localStorage.setItem(ENTITY_KEY, JSON.stringify(data));
+    const fortId = fortStore.ensureActive();
+    localStorage.setItem(FORT_KEYS.entities(fortId), JSON.stringify(data));
+    fortStore.update(fortId, {});  // bump updatedAt
   },
 
   /**
@@ -871,7 +1155,9 @@ export const entityStore = {
   },
 
   clearAll() {
-    localStorage.removeItem(ENTITY_KEY);
+    const fortId = fortStore.ensureActive();
+    localStorage.removeItem(FORT_KEYS.entities(fortId));
+    fortStore.update(fortId, {});
   },
 };
 
@@ -963,7 +1249,10 @@ Current ${level}: ${JSON.stringify(snapshot, null, 2)}`,
     { role: "user", content: userPrompt },
   ];
 
-  const result = await chat({ messages, maxTokens: level === "campus" ? 4000 : 2500 });
+  const result = await chat({
+    messages,
+    maxTokens: level === "campus" ? 16000 : level === "building" ? 5000 : 2500,
+  });
   const json = extractJson(result.content);
   if (!json || !json.id) throw new Error(`LLM did not return valid ${level} JSON. Raw: ${result.content.slice(0, 200)}`);
 
@@ -1036,14 +1325,17 @@ export const threadStore = {
   /** @returns {Record<string, ThreadMessage[]>} */
   _all() {
     try {
-      const raw = localStorage.getItem(THREAD_KEY);
+      const fortId = fortStore.ensureActive();
+      const raw = localStorage.getItem(FORT_KEYS.threads(fortId));
       return raw ? JSON.parse(raw) : {};
     } catch (_) {
       return {};
     }
   },
   _save(data) {
-    localStorage.setItem(THREAD_KEY, JSON.stringify(data));
+    const fortId = fortStore.ensureActive();
+    localStorage.setItem(FORT_KEYS.threads(fortId), JSON.stringify(data));
+    fortStore.update(fortId, {});
   },
 
   /**
@@ -1078,9 +1370,11 @@ export const threadStore = {
   },
 
   /**
-   * Clear ALL threads.
+   * Clear ALL threads in the active fort.
    */
   clearAll() {
-    localStorage.removeItem(THREAD_KEY);
+    const fortId = fortStore.ensureActive();
+    localStorage.removeItem(FORT_KEYS.threads(fortId));
+    fortStore.update(fortId, {});
   },
 };

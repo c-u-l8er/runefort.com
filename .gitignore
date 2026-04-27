@@ -3,3 +3,6 @@ node_modules
 build
 .env
 .env.*
+
+# Site-local Supabase config (see runefort-config.example.js)
+runefort-config.js
