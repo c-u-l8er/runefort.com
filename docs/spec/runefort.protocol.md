@@ -2,10 +2,24 @@
 
 **A layout protocol for living, file-backed, tile-grid web apps.**
 
+> **Part of the [&] Protocol stack** · [Ecosystem overview](../../../ECOSYSTEM.md) · [Three-protocol stack](../../../PULSE/docs/THREE_PROTOCOL_STACK.md) · [Stack status](../../../STACK_COMPLETION.md)
+
 Status: draft v0.1
 Owner: runefort.com
 Date: 2026-04-25
 Position: protocol-level. Independent of [&], PULSE, PRISM. May be used by them; does not require them.
+
+**Related documents:**
+
+- [@runefort/core — Reference Web Component Framework v0.1](runefort.core.md)
+- [.rune DSL — v0.1](runefort.dsl.md)
+- [Interactive Layer — Build Order](../../.claude/prompts/RFORT-BUILD-ORDER.md)
+- [RFort-1 — BYOK Modal + OpenRouter Key Storage](../../.claude/prompts/RFORT-1_BYOK.md)
+- [RFort-2 — MCP Proxy + Client + Connection Panel](../../.claude/prompts/RFORT-2_MCP.md)
+- [RFort-3 — Chat Panel with Fort-Aware Navigation](../../.claude/prompts/RFORT-3_CHAT.md)
+- [RFort-4 — Token Flow Animations on Edges](../../.claude/prompts/RFORT-4_TOKENFLOWS.md)
+- [RFort-5 — Repo Import → Fort Generator](../../.claude/prompts/RFORT-5_REPO_IMPORT.md)
+- [RFort-6 — Workspace Switcher + Supabase Persistence](../../.claude/prompts/RFORT-6_WORKSPACES.md)
 
 ---
 
