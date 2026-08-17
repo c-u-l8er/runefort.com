@@ -20,10 +20,28 @@ refuses when a figure moves without its record. `launch-gate.mjs` reads the emit
 artifact and refuses on the other ways a page lies — a retracted claim reinstated, a rung
 invented, a CTA the rung has not earned, a `mailto:`, a text token below 4.5:1, a
 documented path that resolves to nothing, an artifact that is not what its source compiles
-to, an identifying-animation constant leaking into the copy. **93 checks; it has been made
-to refuse 18 times deliberately.** The shell is documented in `ProjectAmp2/agents/SHELL.md`;
-this surface is built against revision **`shell-r5`**, recorded as `shell_revision` in
-`records/surface.json`.
+to, an identifying-animation constant leaking into the copy. **129 checks.** The shell is
+documented in `ProjectAmp2/agents/SHELL.md`; this surface is built against revision
+**`shell-r9`**, recorded as `shell_revision` in `records/surface.json`.
+
+**Do not hand-type a check count anywhere.** The gate prints its own total; the number
+above is what it printed on 2026-08-17, and it went 93 → 129 in a single session.
+
+Two checks are newer than the rest and are the ones to understand first:
+
+- **The computed-colour resolver.** Travis reported the header CTA unreadable and he was
+  right: `.top nav a` is specificity 0,2,1 and `.btn` is 0,1,0, so the nav rule won and
+  "Walk a fort" painted `rgba(233,234,228,.66)` on `#9ee04f` — **1.19:1** — while the
+  identical button in the hero painted `#0b1403` correctly. **Every contrast check here
+  passed the whole time**, because they read *declared tokens* and never the colour the
+  cascade gives a real element. The gate now resolves the cascade over the emitted
+  artifact (specificity, source order, `!important`, `@media` at 1600/1280/800/390,
+  `var()`, inheritance) against each `.btn`'s real ancestor chain. Verdicts were
+  cross-checked against the browser's computed styles and agreed on all four buttons.
+  A selector it cannot parse is a REFUSAL, not a skip; finding zero buttons is a REFUSAL.
+- **The correction form's shape** (SHELL.md r9): the `action` must equal the endpoint the
+  record declares, and `_gotcha` must be present — a honeypot dropped in a refactor fails
+  silently.
 
 `/app/` (the editor) is hand-authored, predates this shell, and is NOT generated. It is
 the surface's `live_deployed` artifact.
