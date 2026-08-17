@@ -251,7 +251,7 @@ function weightTable() {
     ];
     const body = rows
         .map(([k, m, note]) =>
-            `<tr${k === "entry" ? ' class="hi"' : ""}><td class="place">${esc(m.label)}<br><span style="opacity:.7">${note}</span></td><td>${esc(m.entry)}</td><td class="num">${m.modules} modules</td><td class="num">${m.raw.toLocaleString()} bytes</td><td class="num">${m.gzip.toLocaleString()} gzipped</td></tr>`
+            `<tr${k === "entry" ? ' class="hi"' : ""}><td class="place">${esc(m.label)}<br><span style="opacity:.7">${note}</span></td><td>${esc(m.entry)}</td><td class="num">${m.modules} ${m.modules === 1 ? "module" : "modules"}</td><td class="num">${m.raw.toLocaleString()} bytes</td><td class="num">${m.gzip.toLocaleString()} gzipped</td></tr>`
         )
         .join("");
     return `<div class="scroll"><table style="min-width:820px"><thead><tr><th>What you load</th><th>Entry point</th><th>Reached</th><th>Raw</th><th>Gzip level 9</th></tr></thead><tbody>${body}</tbody></table></div>`;

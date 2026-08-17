@@ -148,7 +148,7 @@ for (const s of RETRACTED) {
 {
     const declared = new Set(Object.values(weights.measured).flatMap((m) => [
         String(m.gzip), m.gzip.toLocaleString(), String(m.raw), m.raw.toLocaleString(),
-        (m.gzip / 1024).toFixed(1) + " KB", (m.raw / 1024).toFixed(1) + " KB", `${m.modules} modules`,
+        (m.gzip / 1024).toFixed(1) + " KB", (m.raw / 1024).toFixed(1) + " KB", `${m.modules} modules`, `${m.modules} module`,
     ]));
     const printed = [...landing.matchAll(/<td class="num">([^<]+)<\/td>/g)].map((m) => m[1].trim());
     const invented = printed.filter((p) => !declared.has(p) && !declared.has(p.replace(/ (bytes|gzipped)$/, "")));
