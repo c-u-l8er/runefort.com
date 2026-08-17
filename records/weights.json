@@ -1,0 +1,78 @@
+{
+  "schema": "runefort-weights-v1",
+  "_comment": "Frozen by build-site.mjs on first run. Every figure here is recomputed from packages/core on every subsequent build by walking the ES module import graph and gzipping at level 9, and the build refuses on any disagreement. Do not hand-edit: if a component grows, that is a fact about the components, not a typo on this page.",
+  "frozen_at": "2026-08-16",
+  "measured": {
+    "floor": {
+      "modules": 6,
+      "raw": 24443,
+      "gzip": 6794,
+      "names": [
+        "editor-handoff.js",
+        "rune-claim.js",
+        "rune-floor.js",
+        "rune-link.js",
+        "rune-room.js",
+        "threshold.js"
+      ]
+    },
+    "entry": {
+      "modules": 19,
+      "raw": 163749,
+      "gzip": 42065,
+      "names": [
+        "editor-handoff.js",
+        "index.js",
+        "rune-action.js",
+        "rune-building.js",
+        "rune-campus.js",
+        "rune-claim.js",
+        "rune-editor.js",
+        "rune-elevator.js",
+        "rune-floor.js",
+        "rune-link.js",
+        "rune-marquee.js",
+        "rune-modal.js",
+        "rune-room.js",
+        "rune-source.js",
+        "rune-thread.js",
+        "runtime.js",
+        "supabase.js",
+        "templates.js",
+        "threshold.js"
+      ]
+    },
+    "theme": {
+      "modules": 1,
+      "raw": 22314,
+      "gzip": 4478,
+      "names": [
+        "theme.css"
+      ]
+    },
+    "cloud": {
+      "modules": 1,
+      "raw": 12487,
+      "gzip": 3704,
+      "names": [
+        "supabase.js"
+      ]
+    }
+  },
+  "elements": [
+    "rune-action",
+    "rune-building",
+    "rune-campus",
+    "rune-claim",
+    "rune-editor",
+    "rune-elevator",
+    "rune-floor",
+    "rune-link",
+    "rune-marquee",
+    "rune-message",
+    "rune-modal",
+    "rune-room",
+    "rune-source",
+    "rune-thread"
+  ]
+}

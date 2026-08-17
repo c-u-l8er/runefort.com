@@ -1,0 +1,13 @@
+{
+  "name": "runefort-site",
+  "version": "0.1.0-alpha.1",
+  "private": true,
+  "type": "module",
+  "description": "runefort.com — generated from frozen records and from the component files themselves, with a gate that refuses to publish drift. Zero dependencies. The published package is packages/core (@runefort/core); this manifest is the SITE only.",
+  "scripts": {
+    "build:site": "node build-site.mjs",
+    "gate": "node launch-gate.mjs",
+    "test:launch": "node build-site.mjs && node launch-gate.mjs",
+    "serve": "python3 -m http.server 8128 --bind 127.0.0.1"
+  }
+}

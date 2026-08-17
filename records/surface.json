@@ -1,0 +1,142 @@
+{
+  "schema": "computedriven-surface-v1",
+  "_comment": "The frozen record this landing page is GENERATED from. Nothing on the emitted page may state a rung, a status or a weight that is not derived here or recomputed by build-site.mjs from the component files themselves. launch-gate.mjs reads the emitted index.html and refuses to publish when the two disagree.",
+
+  "shell_revision": "shell-r5",
+  "version": "0.1.0-alpha.1",
+  "origin": "https://runefort.com",
+  "repo": "https://github.com/c-u-l8er/runefort.com",
+  "surface": "RuneFort",
+  "layer": "interface",
+  "parent": "ComputeDriven",
+
+  "tier": 3,
+  "_tier_comment": "READ THE NAV, NOT THE TEMPLATE. ampersand-nav/src/amp-nav.js records runefort as { place: 3 }, and its own renderPlacement() at line 1690 emits the layer sentence ONLY for place 2 — place 3 gets 'a specification in the ComputeDriven world'. SHELL.md §1 documents two band variants (standard-with-layer, and the tier-4 attribution variant) and does not mention this third one, so applying the standard band here would have put the page's own band in direct contradiction with the nav rendered underneath it. Checked 2026-08-16 by reading amp-nav.js; the nav source is lane N's and was NOT edited.",
+  "_nav_rung_disagreement": "amp-nav records runefort with { rung: null }, which renders as ?. This surface measures live_deployed, because <rune-floor> was loaded from this domain and its declared cells were measured resolving to real CSS grid tracks. The nav's null is honest — it predates any measurement — but it is now out of date. Only lane N may change it. Flagged in the lane report.",
+
+  "question": "Can a layout be a file you can diff?",
+  "spec_file": "docs/spec/runefort.protocol.md",
+  "_spec_file_comment": "There is NO docs/spec/README.md in this repository — runefort is the one Tier-3 domain in the portfolio without one, and the root CLAUDE.md pointed at that filename until 2026-08-15. The protocol spec is runefort.protocol.md, with runefort.core.md and runefort.dsl.md beside it.",
+
+  "surface_rung": "live_deployed",
+  "rung_witness": "deployed_grid_check",
+  "_rung_witness_comment": "SHELL.md r5. GPSCoord's rule \"any pending gate blocks live_deployed\" is too blunt: independent_use and second_renderer are pending FOREVER by construction, so a surface could never advance. This names the ONE gate that witnesses the rung; the others stay pending without blocking it, and launch-gate.mjs refuses if the named gate is not approved.",
+  "surface_rung_covers": "the four layout primitives at /app/ — rune-floor, rune-room, rune-claim and rune-link, measured compiling a declaration into real CSS grid tracks in a browser on this domain. It does not cover the .rune DSL, which has no parser, or cloud sync, which points at a data layer this portfolio has abandoned",
+  "verified_at": "2026-08-16",
+
+  "status": {
+    "statement": "A declaration was loaded from this domain and the grid it asks for was measured in the browser, cell by cell. The components are published and the page you are reading is laid out with the same vocabulary they implement.",
+    "source": "https://runefort.com/app/ opened in a browser on 2026-08-16. rune-floor resolved to display:grid with six 157.828px tracks; a room declaring size 6,1 measured 1017px wide and rooms declaring position 0,1 and 3,1 measured 502px wide at x=224 and x=740 — side by side, three tracks each, one gap between. Fourteen custom elements upgraded. The weights below are recomputed from the component files by this site's build.",
+    "limit": "This establishes that ONE renderer — the one in this repository — compiles a declaration into the grid that declaration asks for. Renderer portability is the protocol's entire claim and there is exactly one renderer, so nothing here tests it. It does not establish that any layout outside this repository has been authored, that the .rune DSL works (it has no parser), or that cloud sync functions; that path is wired to Supabase, which this portfolio ruled out on 2026-07-30."
+  },
+
+  "advance": {
+    "next_rung": "external",
+    "requires": "A second renderer, written by someone who is not us, that compiles the same runefort.json into the same cell geometry. Elixir/Phoenix or React are the two the spec names. Until one exists, 'renderer-portable' is a design intention rather than a measured property."
+  },
+
+  "primitives": [
+    { "id": "room",     "name": "Room",     "one": "a tile",              "detail": "An id, an integer position, an integer size in grid cells, and arbitrary metadata. [0,0] is top-left; size [3,2] is three columns by two rows. The renderer picks the pixel size — the protocol only specifies cell counts.", "pos": "0,0", "size": "3,1" },
+    { "id": "claim",    "name": "Claim",    "one": "the files it owns",    "detail": "A glob and an anchor. The room owns that region of the filesystem, and activating the tile surfaces those files — inline, or handed off to your own editor through a vscode:, cursor: or zed: URL.", "pos": "3,0", "size": "3,1" },
+    { "id": "neighbor", "name": "Neighbor", "one": "which tile is next",   "detail": "An adjacency between two rooms. It drives h/j/k/l navigation and focus order, and may be drawn as a line. Adjacency is declared, not inferred from pixels — which is why the keyboard path survives a re-layout.", "pos": "0,1", "size": "2,1" },
+    { "id": "binding",  "name": "Binding",  "one": "what colours the tile","detail": "A named runtime signal, a threshold, and the class it applies. Live state colours a tile without the layout knowing what the signal means. Unknown vocabulary degrades rather than fails.", "pos": "2,1", "size": "4,1" }
+  ],
+
+  "unmeasured": [
+    {
+      "id": "second_renderer",
+      "name": "A renderer we did not write",
+      "rung": "spec",
+      "detail": "The protocol's reason to exist: the same runefort.json should render in Elixir/Phoenix, in TypeScript/React, or in static HTML, and the protocol is the only thing those three share. One implementation cannot demonstrate portability; it can only fail to contradict it.",
+      "needs": "A second renderer, and a fixture that says what geometry counts as agreement.",
+      "built": "no"
+    },
+    {
+      "id": "dsl",
+      "name": "The .rune DSL",
+      "rung": "spec",
+      "detail": "A short authoring syntax that compiles to runefort.json, specified in docs/spec/runefort.dsl.md. There is no parser for it anywhere in this repository. The JSON is the only thing that exists.",
+      "needs": "A parser, and a conformance suite that proves it round-trips to the same JSON.",
+      "built": "no"
+    },
+    {
+      "id": "conformance",
+      "name": "A conformance suite",
+      "rung": "spec",
+      "detail": "Nothing in this tree defines what makes a renderer conformant. There is no test corpus of declarations with expected geometry, which is what the paragraph above would have to be checked against.",
+      "needs": "Declarations plus expected cell geometry, in a form a second implementation can run.",
+      "built": "no"
+    },
+    {
+      "id": "cloud_sync",
+      "name": "Cloud sync",
+      "rung": "spec",
+      "detail": "The entry point exports sign-in, push, pull, fork and public-fort loading against Supabase — twelve and a half kilobytes of it, loaded whether or not you configure it. This portfolio ruled the shared-Supabase route abandoned on 2026-07-30 and its replacement is not built, so this path has no live backend to reach.",
+      "needs": "A ruling on where a fort is stored, which is not this domain's to make.",
+      "built": "code yes, backend no"
+    }
+  ],
+
+  "zero_counts": [
+    {
+      "label": "Build steps",
+      "value": "0",
+      "witness": "The components are ES modules served as written. There is no bundler, no transpiler and no dist/ directory in this repository — which is also why the README's quickstart, which pointed at a built output file, returned 404 for as long as it existed. The path it named is quoted once, in the retraction."
+    },
+    {
+      "label": "Renderers other than ours",
+      "value": "0",
+      "witness": "Checked by looking. The protocol's claim is that its declaration is renderer-portable; there is one renderer and it is the one in packages/core/src."
+    }
+  ],
+
+  "contact": {
+    "kind": "github_issues",
+    "url": "https://github.com/c-u-l8er/runefort.com/issues",
+    "_comment": "Deliberately not a mailto: — Travis's call, 2026-08-11 — and deliberately not another surface's Formspree endpoint. No Formspree endpoint exists for this domain; a live issues URL is the honest correction channel until one is ruled. Flagged [TRAVIS]."
+  },
+
+  "gates": {
+    "_comment": "A gate may not read approved without its evidence, reviewer and date fields, and launch-gate.mjs enforces that.",
+    "deployed_grid_check": {
+      "label": "A declaration compiles to the grid it declares, on this domain",
+      "status": "approved",
+      "description": "https://runefort.com/app/ loaded in a browser; the floor's computed grid-template-columns and each room's bounding box read back and compared with the position and size attributes in the declaration.",
+      "evidence": "Six tracks of 157.828px; size 6,1 measured 1017px; size 3,1 measured 502px at x=224 and x=740; fourteen custom elements upgraded.",
+      "reviewer": "agent-browser, session bendrune, against https://runefort.com/app/",
+      "date": "2026-08-16"
+    },
+    "weight_measured": {
+      "label": "The published byte weights are measured, not estimated",
+      "status": "approved",
+      "description": "build-site.mjs walks the ES module import graph from each entry point, concatenates the reachable files and gzips them at level 9. It refuses to emit the page if a figure disagrees with records/weights.json.",
+      "evidence": "records/weights.json, regenerated on every build.",
+      "reviewer": "build-site.mjs in this repository",
+      "date": "2026-08-16"
+    },
+    "second_renderer": {
+      "label": "Renderer portability",
+      "status": "pending",
+      "description": "The protocol's central claim. One renderer exists. Nothing here tests portability and nothing can, from inside a single implementation.",
+      "evidence": null,
+      "reviewer": null,
+      "date": null
+    },
+    "dsl_parser": {
+      "label": "The .rune DSL has an implementation",
+      "status": "pending",
+      "description": "docs/spec/runefort.dsl.md specifies a syntax. No parser for it exists in this repository.",
+      "evidence": null,
+      "reviewer": null,
+      "date": null
+    },
+    "independent_use": {
+      "label": "Someone who is not us authored a fort",
+      "status": "pending",
+      "description": "The only rung nobody here can award themselves. A declaration written elsewhere, or a filed correction naming geometry this renderer gets wrong.",
+      "evidence": null,
+      "reviewer": null,
+      "date": null
+    }
+  }
+}

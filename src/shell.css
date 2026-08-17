@@ -1,0 +1,204 @@
+/* ==========================================================================
+   The ComputeDriven page shell, revision shell-r5.
+
+   Everything between TOKENS-START and TOKENS-END is this site's own character
+   and is the only part a sibling surface replaces. Everything after
+   TOKENS-END is shared structure, copied from ~/Projects/GPSCoord/src/shell.css
+   with the additions marked "runefort". Documented in
+   ProjectAmp2/agents/SHELL.md.
+   ========================================================================== */
+/* TOKENS-START — RuneFort: torch lime on foundry charcoal */
+:root{
+--ink:#0a0b09;--ink2:#101210;--ink3:#171a16;          /* page · surface · raised */
+--line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.14);
+/* fg2 .66 measures 7.02:1 on the lightest surface; fg3 .55 measures 5.42:1.
+   The shell shipped .34 for a while, which is 2.78:1 — a caveat nobody can
+   read is not a caveat. launch-gate.mjs recomputes both and refuses below
+   4.5:1, so these cannot drift back. SHELL.md §0. */
+--fg:#e9eae4;--fg2:rgba(233,234,228,.66);--fg3:rgba(233,234,228,.55);
+/* Torchlight on stone. It keeps the foundry-green lineage of the editor at
+   /app/ while sitting clear of --data (teal), --warn (gold) and the mint of
+   the live_deployed chip — those three are ROLE colours and must stay
+   readable as roles. Deliberately not the amber of gpscoord.com or the
+   magenta of wrand.cc: shared shell, distinct character. */
+--acc:#9ee04f;--acc-soft:rgba(158,224,79,.1);--acc-line:rgba(158,224,79,.34);
+--data:#5ad1c8;--data-soft:rgba(90,209,200,.1);--warn:#f5c451;
+--display:"Bricolage Grotesque",system-ui,sans-serif;
+--ui:"Archivo",system-ui,-apple-system,sans-serif;
+--mono:"Space Mono",ui-monospace,Menlo,Consolas,monospace;
+--r:10px;--rl:16px
+}
+/* TOKENS-END */
+
+:root{--wrap:1080px;--xs:.6875rem;--sm:.8125rem;--md:1.0625rem;--lg:1.25rem;
+--h2:clamp(1.7rem,4vw,2.5rem);--h1:clamp(2.1rem,5.8vw,3.7rem)}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ink);color:var(--fg);font:.9375rem/1.6 var(--ui);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:var(--acc)}
+h1,h2,h3{margin:0}
+img,canvas,svg{max-width:100%}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 22px}
+
+/* --- placement band ---
+   runefort is amp-nav place:3, and amp-nav's own renderPlacement() emits
+   "a specification in the ComputeDriven world" for place 3 — the layer
+   sentence is place 2 only. The band therefore does NOT claim a layer.
+   .covers is 11px and load-bearing — it is the span that keeps the rung chip
+   honest — so it takes --fg2, not --fg3. SHELL.md §0, §1. */
+.band{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:11px 22px;background:var(--ink2);border-bottom:1px solid var(--line);font-size:var(--xs)}
+.band .where{color:var(--fg2);text-transform:uppercase;letter-spacing:.05em}
+.band .where b{color:var(--fg);font-weight:600}
+.band .covers{color:var(--fg2);flex:1 1 300px;min-width:0}
+.rung{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:var(--xs);padding:2px 9px;border-radius:999px;border:1px solid var(--line2);color:var(--fg2);white-space:nowrap}
+.rung::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.rung[data-rung=spec]{color:#9aa4b2;border-color:rgba(154,164,178,.35)}
+.rung[data-rung=in_tree]{color:#7aa2f7;border-color:rgba(122,162,247,.35)}
+.rung[data-rung=live_local]{color:var(--data);border-color:rgba(90,209,200,.4);background:var(--data-soft)}
+.rung[data-rung=live_deployed]{color:#4ade80;border-color:rgba(74,222,128,.4)}
+.rung[data-rung=external]{color:#c4a1ff;border-color:rgba(196,161,255,.4)}
+.rung[data-rung="?"]{color:var(--warn);border-color:rgba(245,196,81,.45);border-style:dashed}
+
+/* --- nav --- */
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid var(--line)}
+.logo{font-family:var(--mono);font-size:var(--md);font-weight:700;letter-spacing:-.04em;color:var(--fg);text-decoration:none;white-space:nowrap}
+.logo span{color:var(--acc)}
+.logo:hover{color:var(--acc)}
+.top nav{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.top nav a{color:var(--fg2);text-decoration:none;font-size:var(--sm);font-weight:500;white-space:nowrap}
+.top nav a:hover{color:var(--acc)}
+.btn{display:inline-block;background:var(--acc);color:#0b1403;font-weight:700;border-radius:var(--r);padding:11px 20px;text-decoration:none;font-size:var(--sm)}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line2);font-weight:500}
+.btn:hover{filter:brightness(1.1)}
+/* SHELL.md r5: when the nav links wrap onto a second row,
+   justify-content:space-between drops the logo into the middle of it.
+   MEASURED, not copied: r5 gives the breakpoint as 430px, and on this surface
+   the defect is still present at 700px (logo 45px down, against a two-row nav)
+   and gone by 790px. Six nav items wrap later than four. So the breakpoint is
+   780px here, which subsumes 430. Reported back as an r6 candidate: the value
+   belongs to the surface's own nav width, not to the shell. */
+@media(max-width:780px){.top{flex-direction:column;align-items:flex-start;gap:11px}.top nav{width:100%}}
+
+/* --- the identifying animation (SHELL.md §8) ---
+   Absolutely positioned so it cannot move or delay the h1; the section clips
+   it so it can never widen the document; masked so the lede stays readable
+   where they overlap. The text sits above it on z-index. */
+.hero{position:relative;overflow:hidden}
+.hero .front{position:relative;z-index:1}
+.idanim{position:absolute;z-index:0;top:0;bottom:0;right:-20px;left:auto;width:min(46vw,460px);pointer-events:none;
+  -webkit-mask-image:radial-gradient(circle at 54% 50%,#000 52%,transparent 82%);
+  mask-image:radial-gradient(circle at 54% 50%,#000 52%,transparent 82%)}
+.idanim canvas{display:block;width:100%;height:100%}
+@media(min-width:861px){.hero .lede{max-width:min(52ch,56%)}}
+@media(max-width:860px){.idanim{right:-26%;width:min(88vw,460px);opacity:.22}}
+
+/* --- sections --- */
+section{padding:56px 0;border-top:1px solid var(--line)}
+section:first-of-type{border-top:0}
+.eyebrow{font-family:var(--mono);font-size:var(--xs);text-transform:uppercase;letter-spacing:.14em;color:var(--acc);display:flex;align-items:center;gap:11px;margin-bottom:14px}
+.eyebrow::before{content:"";width:20px;height:1px;background:var(--acc);opacity:.6;flex:none}
+h1{font-family:var(--display);font-weight:600;font-size:var(--h1);line-height:1.06;letter-spacing:-.035em;max-width:17ch;text-wrap:balance}
+h1 em{font-style:normal;color:var(--acc)}
+h2{font-family:var(--display);font-weight:500;font-size:var(--h2);line-height:1.12;letter-spacing:-.025em;text-wrap:balance}
+h3{font-size:var(--md);font-weight:600}
+.lede{color:var(--fg2);font-size:var(--md);line-height:1.66;max-width:62ch;margin:14px 0 0}
+p{margin:14px 0 0}
+strong{color:var(--fg);font-weight:600}
+
+/* --- cards ---
+   Separators are each cell's own 1px shadow filling the grid gap, NOT a
+   container background showing through: the background trick leaves a phantom
+   lit rectangle whenever the last row is short. SHELL.md §6. */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1px;background:var(--ink2);border:1px solid var(--line);border-radius:var(--rl);overflow:hidden;margin-top:28px}
+.grid>div{background:var(--ink2);padding:22px;min-width:0;box-shadow:0 0 0 1px var(--line)}
+.grid h3{margin-bottom:8px}
+.grid p{margin:0;color:var(--fg2);font-size:var(--sm);line-height:1.62}
+.grid .head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}
+.grid .head h3{margin:0}
+.needs{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line2);font-family:var(--mono);font-size:var(--xs);color:var(--fg3);line-height:1.6;overflow-wrap:anywhere}
+.needs b{color:var(--fg2);font-weight:500}
+
+/* --- runefort's own figure: THE FLOOR ---
+   This block is the page demonstrating the protocol by being laid out with
+   it. Each card carries the position and size it would declare, and it is
+   placed at exactly those cells with grid-column / grid-row. Six columns,
+   two rows, one gap — no script, no components, nothing to upgrade. If the
+   protocol's vocabulary could not describe an ordinary page section, that
+   would be worth knowing, and this is the cheapest possible test of it.
+   Below 700px the floor collapses to one column, which is what a renderer
+   with a narrower viewport would also have to do. */
+.floor{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:28px}
+.floor .room{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:20px;min-width:0;position:relative;transition:border-color .2s,background .2s}
+.floor .room:hover{border-color:var(--acc-line);background:var(--acc-soft)}
+.floor .room h3{margin-bottom:4px}
+.floor .room .one{font-family:var(--mono);font-size:var(--xs);text-transform:uppercase;letter-spacing:.1em;color:var(--acc);margin-bottom:10px}
+.floor .room p{margin:0;color:var(--fg2);font-size:var(--sm);line-height:1.6}
+.floor .cell{position:absolute;top:14px;right:16px;font-family:var(--mono);font-size:var(--xs);color:var(--fg3);white-space:nowrap}
+.floor .r0{grid-column:1/span 3;grid-row:1}
+.floor .r1{grid-column:4/span 3;grid-row:1}
+.floor .r2{grid-column:1/span 2;grid-row:2}
+.floor .r3{grid-column:3/span 4;grid-row:2}
+@media(max-width:700px){.floor{grid-template-columns:1fr}
+.floor .r0,.floor .r1,.floor .r2,.floor .r3{grid-column:1;grid-row:auto}}
+
+/* --- count plate + the weight table --- */
+.plate{grid-template-columns:repeat(auto-fit,minmax(158px,1fr))}
+.plate>div{text-align:center;padding:22px 12px}
+.plate .n{font-family:var(--mono);font-weight:700;font-size:1.45rem;color:var(--fg)}
+.plate .l{font-size:var(--xs);letter-spacing:.1em;text-transform:uppercase;color:var(--fg3);margin-top:5px}
+.sm{font-size:var(--sm)}
+.mt{margin-top:40px}
+
+/* --- status block --- */
+.status{border:1px solid var(--line2);border-radius:var(--rl);background:var(--ink2);overflow:hidden;margin-top:26px}
+.status>div{display:grid;grid-template-columns:150px 1fr;gap:16px;padding:15px 20px;border-top:1px solid var(--line);min-width:0}
+.status>div:first-child{border-top:0}
+.status dt{font-family:var(--mono);font-size:var(--xs);text-transform:uppercase;letter-spacing:.1em;color:var(--fg3);margin:0}
+.status dd{margin:0;font-size:var(--sm);color:var(--fg2);line-height:1.6;min-width:0;overflow-wrap:anywhere}
+.status dd strong{color:var(--fg);font-weight:600}
+.status .limit{background:rgba(245,196,81,.05)}
+.status .limit dt{color:var(--warn)}
+
+/* --- evidence table ---
+   Wide content scrolls in its own box, never the document. SHELL.md §6. */
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--ink2);margin-top:22px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-family:var(--mono);font-size:var(--xs)}
+th,td{text-align:left;padding:11px 15px;border-top:1px solid var(--line);white-space:nowrap}
+th{color:var(--fg3);text-transform:uppercase;letter-spacing:.09em;font-weight:500;background:var(--ink3);border-top:0}
+td.place{white-space:normal;font-family:var(--ui);color:var(--fg);min-width:200px}
+td.num{color:var(--data);text-align:right}
+tr.hi td{background:rgba(245,196,81,.05)}
+tr.hi td.num{color:var(--warn)}
+
+/* --- claim tag + retraction --- */
+.tag{display:inline-block;font-family:var(--mono);font-size:var(--xs);text-transform:uppercase;letter-spacing:.06em;color:var(--warn);background:rgba(245,196,81,.06);border:1px dashed rgba(245,196,81,.35);border-radius:6px;padding:5px 11px;margin-bottom:16px}
+.tag.ok{color:var(--data);border-color:rgba(90,209,200,.35);background:var(--data-soft)}
+.retract{border-left:3px solid var(--warn);background:rgba(245,196,81,.05);border-radius:0 var(--r) var(--r) 0;padding:20px;max-width:74ch;margin-top:26px}
+.retract h3{color:var(--warn);font-size:.9375rem}
+.retract p{font-size:var(--sm);color:var(--fg2);line-height:1.7}
+code{font-family:var(--mono);font-size:.92em;background:rgba(255,255,255,.05);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+pre{margin:22px 0 0;padding:18px 20px;background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);overflow-x:auto;font-family:var(--mono);font-size:var(--sm);line-height:1.7;color:var(--fg2)}
+pre b{color:var(--acc);font-weight:400}
+pre i{color:var(--data);font-style:normal}
+
+/* --- CTA, keyed to rung --- */
+.cta{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.cta a{display:block;background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:20px;text-decoration:none;transition:border-color .2s,background .2s,transform .2s;min-width:0}
+.cta a:hover{border-color:var(--acc-line);background:var(--acc-soft);transform:translateY(-2px)}
+.cta .verb{display:block;font-family:var(--mono);font-size:var(--xs);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--acc);margin-bottom:7px}
+.cta .what{display:block;font-size:var(--sm);line-height:1.55;color:var(--fg2)}
+.cta code{color:var(--data);background:none;padding:0}
+.ctagroup+.ctagroup{margin-top:34px}
+
+/* --- footer --- */
+footer{border-top:1px solid var(--line);background:var(--ink2);margin-top:56px}
+footer .in{max-width:var(--wrap);margin:0 auto;padding:26px 22px;display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center;font-size:var(--xs);color:var(--fg3)}
+footer a{color:var(--fg2);text-decoration:none}
+footer a:hover{color:var(--acc)}
+footer .links{display:flex;flex-wrap:wrap;gap:20px}
+.stamp{font-family:var(--mono);color:var(--fg3)}
+.attrib{max-width:var(--wrap);margin:0 auto;padding:0 22px 26px;font-size:var(--xs);color:var(--fg3);line-height:1.6}
+
+@media(max-width:640px){.status>div{grid-template-columns:1fr;gap:6px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}

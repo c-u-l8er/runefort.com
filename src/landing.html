@@ -1,0 +1,96 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Can a layout be a file you can diff? — RuneFort</title>
+<meta name="description" content="RuneFort is a layout protocol: rooms, claims, neighbors and bindings, declared as JSON that lives in your repository. A declaration compiles to a real CSS grid, and this page measures that on the deployed domain — including what the components actually weigh, which is not what this site used to say.">
+<meta name="falsifiable-question" content="{{QUESTION}}">
+<link rel="canonical" href="{{ORIGIN}}/">
+<meta name="theme-color" content="#0a0b09">
+<meta property="og:title" content="Can a layout be a file you can diff? — RuneFort">
+<meta property="og:description" content="A layout protocol for tiled, file-backed UIs. Four primitives, one renderer, and the byte weights measured rather than estimated.">
+<meta property="og:type" content="website"><meta property="og:url" content="{{ORIGIN}}/">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>{{CSS}}</style></head><body>
+{{BAND}}
+<div class="wrap">
+
+<div class="top"><a class="logo" href="/">rune<span>fort</span></a>
+<nav><a href="#floor">The four primitives</a><a href="#weight">What it weighs</a><a href="#evidence">Evidence</a><a href="#status">Status</a><a href="{{SPEC_URL}}">Read the spec &uarr;</a><a class="btn" href="{{APP_PATH}}">Walk a fort</a></nav></div>
+
+<section class="hero">
+<div class="front">
+<div class="eyebrow">The question this site exists to answer</div>
+<h1>Can a layout be a file you can <em>diff?</em></h1>
+<p class="lede">Where a thing sits on the screen is usually the least reviewable fact about a system. It lives in a canvas file, in a hosted dashboard, or in whatever a force-directed graph decided this morning. <strong>RuneFort declares it instead</strong> &mdash; rooms at integer cells, the files each room owns, which room is next, and what colours it &mdash; as JSON that sits in your repository and shows up in a pull request.</p>
+<p><a class="btn" href="{{APP_PATH}}">Walk a fort</a>&nbsp;&nbsp;<a class="btn ghost" href="#evidence">See what was measured</a></p>
+</div>
+<!-- The identifying animation (SHELL.md §8). It comes AFTER the h1 in source
+     order and sits behind it, because the question comes first. It renders no
+     data and asserts nothing: /tiles.js takes no input from this document and
+     writes nothing back into it, and it lays out on a grid whose dimensions
+     appear nowhere on this page. Delete the one script tag at the bottom of
+     this file and every word, figure, chip and row here is still present. -->
+<div class="idanim" aria-hidden="true"><canvas data-identity-animation></canvas></div>
+</section>
+
+{{PLATE}}
+
+<section id="floor">
+<div class="eyebrow">The whole vocabulary</div>
+<h2>Four primitives. This section is laid out with them.</h2>
+<p class="lede">The four cards below are placed at the cells they name, on a six-column floor, with plain CSS grid and no components. It is the cheapest available test of whether the vocabulary can describe an ordinary piece of a page &mdash; and if it could not, that would be worth knowing before anything else on this site.</p>
+{{FLOOR}}
+<p class="lede sm">Everything else in the protocol is a vocabulary layered on top of these four. A renderer that does not recognise a vocabulary must still draw the layout using the primitives &mdash; unknown vocabulary degrades, it does not fail.</p>
+</section>
+
+<section id="declare">
+<div class="eyebrow">What a declaration looks like</div>
+<h2>Two rooms, one file, no build step.</h2>
+<p class="lede">This is the whole quick-start, and both paths in it are resolved against the tree before this page is emitted. The components are ES modules served as written &mdash; there is no bundler in this repository and no built output directory, which is worth stating plainly, because the README pointed at one that does not exist and the first line anyone copied returned 404.</p>
+{{QUICKSTART}}
+</section>
+
+<section id="weight">
+<div class="eyebrow">What it actually weighs</div>
+<h2>Measured by walking the import graph, not estimated.</h2>
+<p class="lede">This site printed one weight, seven times, and never once said the weight of <em>what</em>. The build now resolves each entry point's ES module imports transitively, concatenates every file it reaches and gzips the result at level&nbsp;9, and refuses to publish the page if a figure moves without the record moving with it.</p>
+{{WEIGHT_TABLE}}
+<p class="lede sm">{{WEIGHT_NOTE}}</p>
+</section>
+
+<section id="evidence">
+<div class="eyebrow">Evidence</div>
+<h2>A declaration was loaded from this domain, and the grid it asked for was measured.</h2>
+<p class="lede">The protocol's claim at this rung is narrow and checkable: what you declare in cells is what the browser lays out in tracks. So it was checked in a browser, on the deployed domain, rather than asserted.</p>
+{{MEASUREMENT}}
+</section>
+
+<section id="open">
+<div class="eyebrow">What is not established</div>
+<h2>There is one renderer, and portability is the point.</h2>
+<p class="lede">Everything above establishes that <em>this</em> renderer honours a declaration. The protocol exists so that a second one would honour the same declaration identically, and there is no second one, so that property is unmeasured rather than proven.</p>
+{{OPEN_CARDS}}
+</section>
+
+<section id="status">
+<div class="eyebrow">Status</div>
+<h2>Where this stands, and what would move it.</h2>
+{{STATUS}}
+{{ZEROS}}
+{{RETRACTION}}
+</section>
+
+<section id="do">
+<div class="eyebrow">What you can actually do here</div>
+<h2>Two rungs, two lists. Nothing asks you to use what is not built.</h2>
+{{CTA}}
+</section>
+
+</div>
+<footer><div class="in">
+<span class="stamp">{{STAMP}}</span>
+<span class="links"><a href="{{APP_PATH}}">Walk a fort</a><a href="/examples/no-framework/">Plain-HTML example</a><a href="{{REPO}}">Source</a><a href="{{SPEC_URL}}">Spec</a><a href="{{CONTACT}}">File a correction</a></span>
+</div>
+<div class="attrib">This page is generated from <code>records/surface.json</code> and from the component files themselves, and <code>launch-gate.mjs</code> refuses to publish it when the artifact and the records disagree. Its whole content ships with zero JavaScript &mdash; the one script below is the identifying animation, which reads nothing from this page and writes nothing to it. &copy; {{YEAR}} RuneFort.</div>
+</footer>
+<script src="/tiles.js" defer></script>
+</body></html>

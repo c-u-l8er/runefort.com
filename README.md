@@ -19,7 +19,10 @@ runefort.com/
     runefort.core.md           Reference Web Component framework spec
     runefort.dsl.md            .rune authoring DSL spec
   packages/
-    core/                      @runefort/core — the reference framework (~5KB target)
+    core/                      @runefort/core — the reference framework
+                               (measured: 6,794 bytes gzipped for the four layout
+                                primitives, 42,065 for the documented entry point.
+                                Recomputed on every site build; see records/weights.json)
   examples/
     no-framework/              Plain HTML demo, proves "runs anywhere"
   old_scrap/
@@ -32,7 +35,7 @@ runefort.com/
 Drop this into any HTML file. No build step.
 
 ```html
-<script type="module" src="/packages/core/dist/index.js"></script>
+<script type="module" src="/packages/core/src/index.js"></script>
 <link rel="stylesheet" href="/packages/core/theme.css">
 
 <rune-floor columns="6" rows="2" editor="vscode">
@@ -55,7 +58,10 @@ Drop this into any HTML file. No build step.
 | `<rune-*>` HTML | Custom Elements | Embedding inside existing apps |
 | `.rune` DSL | Curly-brace declarative | Hand-authored layouts |
 
-All three round-trip losslessly via the `runefort` CLI.
+**Only the first two exist.** `runefort.json` and the `<rune-*>` elements are implemented in
+`packages/core/src`. The `.rune` DSL is specified in `docs/spec/runefort.dsl.md` and **has no
+parser**, and there is **no `runefort` CLI** in this repository — this line claimed one, and
+claimed all three round-trip through it, until 2026-08-16.
 
 ## Read the specs
 
